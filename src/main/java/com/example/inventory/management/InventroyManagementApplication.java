@@ -1,13 +1,13 @@
-package com.example.deepfineinventroymanagement;
+package com.example.inventory.management;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class DeepfineInventroyManagementApplication {
+public class InventroyManagementApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(DeepfineInventroyManagementApplication.class, args);
+        SpringApplication.run(InventroyManagementApplication.class, args);
     }
 
 }
