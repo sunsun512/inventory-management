@@ -19,7 +19,7 @@ Build tool is Gradle (via the wrapper — do not assume a global `gradle` instal
 ./gradlew build              # full build (compiles + runs tests)
 ./gradlew test                # run all tests
 ./gradlew test --tests "com.example.inventory.management.InventroyManagementApplicationTests"  # single test class
-./gradlew test --tests "*.InventroyManagementApplicationTests.contextLoads"  # single test method
+./gradlew test --tests "*.InventroyManagementApplicationTests.컨텍스트가_정상적으로_로드된다"  # single test method
 ./gradlew bootRun              # run the application locally
 ./gradlew clean                # clean build outputs
 ```
