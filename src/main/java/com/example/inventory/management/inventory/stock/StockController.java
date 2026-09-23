@@ -1,0 +1,31 @@
+package com.example.inventory.management.inventory.stock;
+
+import com.example.inventory.management.inventory.stock.dto.InboundRequest;
+import com.example.inventory.management.inventory.stock.dto.OutboundRequest;
+import com.example.inventory.management.inventory.stock.dto.StockChangeResponse;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/stocks")
+public class StockController {
+
+    private final StockService stockService;
+
+    public StockController(StockService stockService) {
+        this.stockService = stockService;
+    }
+
+    @PostMapping("/inbound")
+    public StockChangeResponse inbound(@Valid @RequestBody InboundRequest request) {
+        return stockService.inbound(request);
+    }
+
+    @PostMapping("/outbound")
+    public StockChangeResponse outbound(@Valid @RequestBody OutboundRequest request) {
+        return stockService.outbound(request);
+    }
+}
