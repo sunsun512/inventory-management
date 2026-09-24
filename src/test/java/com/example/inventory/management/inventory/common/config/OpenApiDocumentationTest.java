@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.hasKey;
@@ -57,11 +58,13 @@ class OpenApiDocumentationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void 재고_이력_조회는_페이지_파라미터를_개별_쿼리_파라미터로_문서화한다() throws Exception {
+    void 재고_이력_조회는_page와_size만_개별_쿼리_파라미터로_문서화한다() throws Exception {
         mockMvc.perform(get(API_DOCS))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paths['/api/v1/products/{productId}/stock-histories'].get.parameters[*].name",
-                        hasItems("productId", "page", "size", "sort")));
+                        hasItems("productId", "page", "size")))
+                .andExpect(jsonPath("$.paths['/api/v1/products/{productId}/stock-histories'].get.parameters[*].name",
+                        not(hasItem("sort"))));
     }
 
     @Test
