@@ -1,5 +1,7 @@
 package com.example.inventory.management.inventory.common.exception;
 
+import org.hibernate.exception.ConstraintViolationException;
+
 import java.sql.SQLException;
 import java.util.Optional;
 
@@ -30,5 +32,30 @@ public final class SqlStates {
 
     public static boolean is(Throwable throwable, String sqlState) {
         return of(throwable).map(sqlState::equals).orElse(false);
+    }
+
+    /**
+     * True if the failure is a unique violation (23505) of the named constraint. The name comes
+     * from Hibernate's ConstraintViolationException when present, otherwise from the driver's
+     * message ({@code violates unique constraint "<name>"}), e.g. for plain JDBC access.
+     */
+    public static boolean isUniqueViolationOf(Throwable throwable, String constraintName) {
+        if (!is(throwable, UNIQUE_VIOLATION)) {
+            return false;
+        }
+        String quotedName = "\"" + constraintName + "\"";
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof ConstraintViolationException violation
+                    && constraintName.equalsIgnoreCase(violation.getConstraintName())) {
+                return true;
+            }
+            if (current instanceof SQLException && current.getMessage() != null
+                    && current.getMessage().contains(quotedName)) {
+                return true;
+            }
+            current = current.getCause() == current ? null : current.getCause();
+        }
+        return false;
     }
 }

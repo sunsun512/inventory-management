@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import tools.jackson.databind.exc.UnrecognizedPropertyException;
 
 import java.util.Optional;
 
@@ -80,15 +81,31 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 headers, ErrorCode.VALIDATION_FAILED.getStatus(), request);
     }
 
-    /** Malformed JSON, missing body, or a field of the wrong type (e.g. {@code quantity: "abc"} or {@code 1.9}). */
+    /**
+     * Malformed JSON, missing body, a field of the wrong type (e.g. {@code quantity: "abc"},
+     * {@code "5"} or {@code 1.9}), or a field the request does not define.
+     */
     @Override
     protected @Nullable ResponseEntity<Object> handleHttpMessageNotReadable(
             HttpMessageNotReadableException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         log.warn("요청 본문 해석 실패: {}", ex.getMessage());
+        String message = unknownPropertyOf(ex)
+                .map(property -> property + ": 알 수 없는 필드입니다.")
+                .orElse("요청 본문을 해석할 수 없습니다. JSON 형식과 필드 타입(quantity·productId는 따옴표 없는 정수)을 확인하세요.");
         return handleExceptionInternal(ex,
-                ErrorResponse.of(ErrorCode.VALIDATION_FAILED.name(),
-                        "요청 본문을 해석할 수 없습니다. JSON 형식과 필드 타입(수량은 정수)을 확인하세요."),
+                ErrorResponse.of(ErrorCode.VALIDATION_FAILED.name(), message),
                 headers, ErrorCode.VALIDATION_FAILED.getStatus(), request);
+    }
+
+    private static Optional<String> unknownPropertyOf(Throwable ex) {
+        Throwable current = ex;
+        while (current != null) {
+            if (current instanceof UnrecognizedPropertyException unrecognized) {
+                return Optional.ofNullable(unrecognized.getPropertyName());
+            }
+            current = current.getCause() == current ? null : current.getCause();
+        }
+        return Optional.empty();
     }
 
     /**
