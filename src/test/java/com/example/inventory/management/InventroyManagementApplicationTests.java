@@ -1,6 +1,6 @@
 package com.example.inventory.management;
 
-import com.example.inventory.management.inventory.support.AbstractIntegrationTest;
+import com.example.inventory.management.support.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
