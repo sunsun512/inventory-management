@@ -1,0 +1,100 @@
+package com.example.inventory.management.stock.domain;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
+@Entity
+@Table(name = "stock_history")
+public class StockHistory {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "product_id", nullable = false)
+    private Long productId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false)
+    private StockType type;
+
+    @Column(name = "quantity", nullable = false)
+    private Long quantity;
+
+    @Column(name = "before_quantity", nullable = false)
+    private Long beforeQuantity;
+
+    @Column(name = "after_quantity", nullable = false)
+    private Long afterQuantity;
+
+    @Column(name = "request_id", nullable = false, unique = true)
+    private String requestId;
+
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+
+    protected StockHistory() {
+    }
+
+    public StockHistory(Long productId, StockType type, Long quantity, Long beforeQuantity,
+                         Long afterQuantity, String requestId) {
+        this(productId, type, quantity, beforeQuantity, afterQuantity, requestId,
+                Instant.now().truncatedTo(ChronoUnit.MICROS));
+    }
+
+    /**
+     * @param createdAt the mutation's timestamp, shared with the product's updated_at so the history
+     *                  row and the product change it records carry the same instant
+     */
+    public StockHistory(Long productId, StockType type, Long quantity, Long beforeQuantity,
+                         Long afterQuantity, String requestId, Instant createdAt) {
+        this.productId = productId;
+        this.type = type;
+        this.quantity = quantity;
+        this.beforeQuantity = beforeQuantity;
+        this.afterQuantity = afterQuantity;
+        this.requestId = requestId;
+        this.createdAt = createdAt;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public Long getProductId() {
+        return productId;
+    }
+
+    public StockType getType() {
+        return type;
+    }
+
+    public Long getQuantity() {
+        return quantity;
+    }
+
+    public Long getBeforeQuantity() {
+        return beforeQuantity;
+    }
+
+    public Long getAfterQuantity() {
+        return afterQuantity;
+    }
+
+    public String getRequestId() {
+        return requestId;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+}
