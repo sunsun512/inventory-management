@@ -1,6 +1,7 @@
 package com.example.inventory.management.inventory.stock;
 
 import com.example.inventory.management.inventory.common.exception.ProductNotFoundException;
+import com.example.inventory.management.inventory.common.exception.SqlStates;
 import com.example.inventory.management.inventory.product.Product;
 import com.example.inventory.management.inventory.product.ProductRepository;
 import com.example.inventory.management.inventory.product.ProductService;
@@ -62,12 +63,18 @@ public class StockService {
      * Runs a mutation, and if it fails on the request_id unique constraint (two concurrent
      * requests with the same idempotency key both passed the earlier findByRequestId check),
      * returns the winner's result instead of surfacing an error — duplicate submission of the
-     * same request_id is defined as success, not a conflict.
+     * same request_id is defined as success, not a conflict. Any other integrity failure is
+     * rethrown untouched rather than being misreported as a requestId collision.
      */
     private StockChangeResponse applyOrRecover(String requestId, Supplier<StockChangeResponse> mutation) {
         try {
             return mutation.get();
         } catch (DataIntegrityViolationException e) {
+            if (!SqlStates.is(e, SqlStates.UNIQUE_VIOLATION)) {
+                log.error("재고 변경 중 데이터 무결성 위반 발생(requestId 충돌 아님): requestId={}, sqlState={}",
+                        requestId, SqlStates.of(e).orElse("unknown"));
+                throw e;
+            }
             log.error("requestId 유니크 제약 충돌 감지, 동시 요청의 처리 결과를 재조회합니다: requestId={}", requestId, e);
             return findByRequestId(requestId)
                     .orElseThrow(() -> {

@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -85,7 +86,7 @@ class StockServiceConcurrencyTest extends AbstractIntegrationTest {
     }
 
     private Long seedProduct(long initialQuantity) {
-        String sku = "CONC-" + UUID.randomUUID();
+        String sku = "CONC" + UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT);
         return stockService.inbound(new InboundRequest(null, sku, "동시성 테스트 상품", initialQuantity, "seed-" + sku))
                 .productId();
     }
