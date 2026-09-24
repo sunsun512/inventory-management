@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/products")
-public class ProductController {
+public class ProductController implements ProductApi {
 
     /**
      * Sort properties clients may request on stock histories. Anything else is rejected with
@@ -34,12 +34,14 @@ public class ProductController {
         this.stockService = stockService;
     }
 
+    @Override
     @GetMapping("/{productId}/stock")
     public StockQuantityResponse getStock(@PathVariable Long productId) {
         Product product = productService.getOrThrow(productId);
         return new StockQuantityResponse(product.getId(), product.getProductCode(), product.getName(), product.getQuantity());
     }
 
+    @Override
     @GetMapping("/{productId}/stock-histories")
     public Page<StockHistoryResponse> getStockHistories(
             @PathVariable Long productId,

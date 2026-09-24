@@ -90,6 +90,34 @@ class GlobalExceptionHandlerIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void 정수_범위를_넘는_수량은_400_VALIDATION_FAILED를_반환하고_수량은_변하지_않는다() throws Exception {
+        for (String endpoint : new String[]{"inbound", "outbound"}) {
+            mockMvc.perform(post("/api/v1/stocks/" + endpoint)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"productId\": " + productId + ", \"productCode\": \"" + productCode
+                                    + "\", \"quantity\": 99999999999999999999, \"requestId\": \"" + newRequestId() + "\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+        }
+        mockMvc.perform(get("/api/v1/products/{id}/stock", productId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quantity").value(10));
+        log.warn("예상된 400 응답 확인: Long 범위를 넘는 quantity");
+    }
+
+    @Test
+    void 정수_범위를_넘는_productId_경로_변수는_400_VALIDATION_FAILED를_반환한다() throws Exception {
+        String overflowId = "99999999999999999999";
+        mockMvc.perform(get("/api/v1/products/{id}/stock", overflowId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+        mockMvc.perform(get("/api/v1/products/{id}/stock-histories", overflowId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+        log.warn("예상된 400 응답 확인: Long 범위를 넘는 productId 경로 변수");
+    }
+
+    @Test
     void 경로_변수_타입이_다르면_400_VALIDATION_FAILED를_반환한다() throws Exception {
         mockMvc.perform(get("/api/v1/products/abc/stock"))
                 .andExpect(status().isBadRequest())
