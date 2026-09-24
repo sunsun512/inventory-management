@@ -1,6 +1,5 @@
 package com.example.inventory.management.inventory.common.exception;
 
-import com.example.inventory.management.inventory.product.ProductRepository;
 import com.example.inventory.management.inventory.product.ProductService;
 import com.example.inventory.management.inventory.support.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,12 +9,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Locale;
-import java.util.UUID;
-
+import static com.example.inventory.management.inventory.support.ProductFixtures.insertProduct;
+import static com.example.inventory.management.inventory.support.ProductFixtures.newRequestId;
+import static com.example.inventory.management.inventory.support.ProductFixtures.uniqueCode;
 import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -41,17 +41,19 @@ class GlobalExceptionHandlerIntegrationTest extends AbstractIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ProductRepository productRepository;
+    private JdbcTemplate jdbcTemplate;
 
     @MockitoSpyBean
     private ProductService productService;
 
     private Long productId;
 
+    private String productCode;
+
     @BeforeEach
     void setUp() {
-        String productCode = "GEH" + UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT);
-        productId = productRepository.upsertProductStock(productCode, "예외 처리 테스트 상품", 10L).getId();
+        productCode = uniqueCode("GEH");
+        productId = insertProduct(jdbcTemplate, productCode, "예외 처리 테스트 상품", 10L);
         log.debug("예외 처리 테스트 상품 준비 완료: productId={}", productId);
     }
 
@@ -80,7 +82,8 @@ class GlobalExceptionHandlerIntegrationTest extends AbstractIntegrationTest {
     void 본문_필드_타입이_다르면_400_VALIDATION_FAILED를_반환한다() throws Exception {
         mockMvc.perform(post("/api/v1/stocks/outbound")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"productId\": 1, \"quantity\": \"abc\", \"requestId\": \"type-mismatch\"}"))
+                        .content("{\"productId\": " + productId + ", \"productCode\": \"" + productCode
+                                + "\", \"quantity\": \"abc\", \"requestId\": \"" + newRequestId() + "\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
         log.warn("예상된 400 응답 확인: quantity 타입 불일치");
@@ -156,7 +159,7 @@ class GlobalExceptionHandlerIntegrationTest extends AbstractIntegrationTest {
     @Test
     void Content_Type이_없으면_415를_반환한다() throws Exception {
         mockMvc.perform(post("/api/v1/stocks/inbound")
-                        .content("{\"productId\": 1, \"quantity\": 1, \"requestId\": \"no-content-type\"}"))
+                        .content("{\"productId\": 1, \"productCode\": \"SKU1\", \"quantity\": 1, \"requestId\": \"" + newRequestId() + "\"}"))
                 .andExpect(status().isUnsupportedMediaType())
                 .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
         log.warn("예상된 415 응답 확인: Content-Type 없음");
@@ -174,7 +177,8 @@ class GlobalExceptionHandlerIntegrationTest extends AbstractIntegrationTest {
     void 검증_실패는_기존_형식대로_400_VALIDATION_FAILED를_반환한다() throws Exception {
         mockMvc.perform(post("/api/v1/stocks/outbound")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"productId\": 1, \"quantity\": 0, \"requestId\": \"invalid-quantity\"}"))
+                        .content("{\"productId\": " + productId + ", \"productCode\": \"" + productCode
+                                + "\", \"quantity\": 0, \"requestId\": \"" + newRequestId() + "\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.startsWith("quantity: ")))

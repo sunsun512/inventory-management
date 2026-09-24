@@ -36,26 +36,24 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Optional<Long> increaseQuantity(@Param("id") Long id, @Param("quantity") Long quantity);
 
     /**
-     * Atomic upsert keyed on the product_code business key: registers a new product or
-     * increments an existing one's quantity in a single statement, so concurrent
-     * first-time registration of the same new product can't race.
+     * Registers a new product with its initial stock, keyed on the product_code business key.
+     * If the code is already registered (including by a concurrent transaction that commits first)
+     * nothing is written and the result is empty: an existing product never has stock added
+     * through this path. Returns the new row's id and quantity via RETURNING.
      */
     @Query(value = """
             INSERT INTO product (product_code, name, quantity, created_at, updated_at)
             VALUES (:productCode, :name, :quantity, now(), now())
-            ON CONFLICT (product_code) DO UPDATE
-                SET quantity = product.quantity + EXCLUDED.quantity, updated_at = now()
-            RETURNING id, quantity, (xmax = 0) AS inserted
+            ON CONFLICT (product_code) DO NOTHING
+            RETURNING id, quantity
             """, nativeQuery = true)
-    UpsertResult upsertProductStock(@Param("productCode") String productCode,
-                                     @Param("name") String name,
-                                     @Param("quantity") Long quantity);
+    Optional<InsertedProduct> insertProductIfAbsent(@Param("productCode") String productCode,
+                                                    @Param("name") String name,
+                                                    @Param("quantity") Long quantity);
 
-    interface UpsertResult {
+    interface InsertedProduct {
         Long getId();
 
         Long getQuantity();
-
-        Boolean getInserted();
     }
 }
