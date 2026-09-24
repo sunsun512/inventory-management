@@ -122,4 +122,26 @@ class ProductControllerIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.content[2].requestId").value(requestIds.get(0)));
         log.info("재고 이력 id 역순 정렬 확인: productId={}", productId);
     }
+
+    @Test
+    void 재고_이력_조회시_sort_파라미터는_무시하고_id_역순으로_반환한다() throws Exception {
+        Long productId = insertProduct(jdbcTemplate, "SKUSORT", "상품 S", 100L);
+        List<String> requestIds = new ArrayList<>();
+        for (int i = 0; i < 2; i++) {
+            String requestId = newRequestId();
+            requestIds.add(requestId);
+            stockHistoryRepository.save(new StockHistory(
+                    productId, StockType.INBOUND, 10L, 100L + i * 10, 110L + i * 10, requestId));
+        }
+        stockHistoryRepository.flush();
+        log.debug("sort 무시 테스트 상품 준비 완료: productId={}", productId);
+
+        for (String sort : List.of("id,asc", "createdAt,asc", "nope")) {
+            mockMvc.perform(get("/api/v1/products/{id}/stock-histories", productId).param("sort", sort))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].requestId").value(requestIds.get(1)))
+                    .andExpect(jsonPath("$.content[1].requestId").value(requestIds.get(0)));
+        }
+        log.info("sort 파라미터 무시 확인: productId={}", productId);
+    }
 }

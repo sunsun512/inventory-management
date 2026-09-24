@@ -1,12 +1,10 @@
 package com.example.inventory.management.inventory.stock;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface StockHistoryRepository extends JpaRepository<StockHistory, Long> {
+public interface StockHistoryRepository extends JpaRepository<StockHistory, Long>, StockHistoryRepositoryCustom {
 
     boolean existsByRequestId(String requestId);
 
@@ -19,6 +17,4 @@ public interface StockHistoryRepository extends JpaRepository<StockHistory, Long
      */
     @Query(value = "SELECT 1 FROM pg_advisory_xact_lock(hashtext(:requestId))", nativeQuery = true)
     Integer acquireRequestIdLock(@Param("requestId") String requestId);
-
-    Page<StockHistory> findByProductId(Long productId, Pageable pageable);
 }

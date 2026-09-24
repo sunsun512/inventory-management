@@ -9,7 +9,6 @@ import org.springframework.beans.TypeMismatchException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.dao.QueryTimeoutException;
-import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -164,18 +163,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             case 404 -> "요청한 리소스를 찾을 수 없습니다.";
             default -> statusCode.is5xxServerError() ? "서버 오류가 발생했습니다." : "요청을 처리할 수 없습니다.";
         };
-    }
-
-    /**
-     * An unknown property in a Pageable/Sort parameter surfaces from Spring Data as
-     * PropertyReferenceException; it is a client error, not a server failure.
-     */
-    @ExceptionHandler(PropertyReferenceException.class)
-    public ResponseEntity<ErrorResponse> handlePropertyReference(PropertyReferenceException ex) {
-        log.warn("존재하지 않는 속성 참조: property={}", ex.getPropertyName());
-        return ResponseEntity.status(ErrorCode.VALIDATION_FAILED.getStatus())
-                .body(ErrorResponse.of(ErrorCode.VALIDATION_FAILED.name(),
-                        "존재하지 않는 속성입니다: " + ex.getPropertyName()));
     }
 
     @ExceptionHandler(InventoryException.class)
