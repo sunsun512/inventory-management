@@ -16,7 +16,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 public abstract class AbstractIntegrationTest {
 
     @ServiceConnection
-    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.5");
 
     static {
         postgres.start();
