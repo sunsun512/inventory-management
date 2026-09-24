@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
@@ -183,7 +182,7 @@ class StockServiceConcurrencyTest extends AbstractIntegrationTest {
 
         assertThat(countOf(results, SUCCESS)).as("results: %s", tally(results)).isEqualTo(pairs * 2);
         assertThat(quantityOf(seeded.id())).isEqualTo(initial + inboundSum - outboundSum);
-        List<StockHistory> histories = stockHistoryRepository.findByProductId(seeded.id(), Pageable.unpaged()).getContent();
+        List<StockHistory> histories = historiesOf(seeded.id());
         assertThat(histories).hasSize(1 + pairs * 2); // seed + every request, no duplicates
         assertHistoryArithmetic(histories);
         log.info("입출고 혼합 동시 처리 정합성 확인: productId={}, finalQuantity={}", seeded.id(), quantityOf(seeded.id()));
@@ -202,7 +201,7 @@ class StockServiceConcurrencyTest extends AbstractIntegrationTest {
 
         assertThat(countOf(results, SUCCESS)).as("results: %s", tally(results)).isEqualTo(threads);
         assertThat(quantityOf(seeded.id())).isEqualTo(initial + threads * each);
-        List<StockHistory> histories = stockHistoryRepository.findByProductId(seeded.id(), Pageable.unpaged()).getContent();
+        List<StockHistory> histories = historiesOf(seeded.id());
         assertThat(histories).hasSize(1 + threads);
         assertHistoryArithmetic(histories);
         // Row-locked updates are serialized, so no two inbounds may observe the same before/after.
@@ -295,7 +294,13 @@ class StockServiceConcurrencyTest extends AbstractIntegrationTest {
     }
 
     private long historyCount(Long productId) {
-        return stockHistoryRepository.findByProductId(productId, Pageable.unpaged()).getTotalElements();
+        return historiesOf(productId).size();
+    }
+
+    private List<StockHistory> historiesOf(Long productId) {
+        return stockHistoryRepository.findAll().stream()
+                .filter(history -> productId.equals(history.getProductId()))
+                .toList();
     }
 
     private long requestIdRowCount(String requestId) {

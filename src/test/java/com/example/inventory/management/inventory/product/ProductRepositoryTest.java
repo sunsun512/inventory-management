@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import static com.example.inventory.management.inventory.support.ProductFixtures.insertProduct;
@@ -33,7 +34,7 @@ class ProductRepositoryTest extends AbstractIntegrationTest {
     void 존재하지_않는_상품코드면_상품이_등록된다() {
         log.debug("신규 상품 등록 테스트 시작: productCode=SKU1");
         Optional<ProductRepository.InsertedProduct> result =
-                productRepository.insertProductIfAbsent("SKU1", "상품 A", 10L);
+                productRepository.insertProductIfAbsent("SKU1", "상품 A", 10L, Instant.now());
 
         assertThat(result).isPresent();
         assertThat(result.get().getQuantity()).isEqualTo(10L);
@@ -47,7 +48,7 @@ class ProductRepositoryTest extends AbstractIntegrationTest {
         Long existingId = insertProduct(jdbcTemplate, "SKU2", "상품 B", 10L);
 
         Optional<ProductRepository.InsertedProduct> result =
-                productRepository.insertProductIfAbsent("SKU2", "다른 이름", 5L);
+                productRepository.insertProductIfAbsent("SKU2", "다른 이름", 5L, Instant.now());
 
         assertThat(result).isEmpty();
         entityManager.clear();
@@ -62,7 +63,7 @@ class ProductRepositoryTest extends AbstractIntegrationTest {
         log.debug("수량 증가 쿼리 테스트 시작: productCode=SKU3");
         Long productId = insertProduct(jdbcTemplate, "SKU3", "상품 C", 10L);
 
-        Optional<Long> after = productRepository.increaseQuantity(productId, 7L);
+        Optional<Long> after = productRepository.increaseQuantity(productId, 7L, Instant.now());
 
         assertThat(after).contains(17L);
         log.info("수량 증가 쿼리 결과 확인: productId={}, afterQuantity={}", productId, after.orElse(null));
@@ -73,7 +74,7 @@ class ProductRepositoryTest extends AbstractIntegrationTest {
         log.debug("재고 충분 시 수량 감소 테스트 시작: productCode=SKU4");
         Long productId = insertProduct(jdbcTemplate, "SKU4", "상품 D", 10L);
 
-        Optional<Long> after = productRepository.decreaseQuantityIfSufficient(productId, 4L);
+        Optional<Long> after = productRepository.decreaseQuantityIfSufficient(productId, 4L, Instant.now());
 
         assertThat(after).contains(6L);
         log.info("수량 감소 쿼리 결과 확인: productId={}, afterQuantity={}", productId, after.orElse(null));
@@ -84,7 +85,7 @@ class ProductRepositoryTest extends AbstractIntegrationTest {
         log.debug("재고 부족 시 수량 감소 테스트 시작: productCode=SKU5");
         Long productId = insertProduct(jdbcTemplate, "SKU5", "상품 E", 10L);
 
-        Optional<Long> after = productRepository.decreaseQuantityIfSufficient(productId, 11L);
+        Optional<Long> after = productRepository.decreaseQuantityIfSufficient(productId, 11L, Instant.now());
 
         if (after.isEmpty()) {
             log.error("재고 부족으로 수량 감소 거부됨(예상된 결과): productId={}, 요청수량=11", productId);
