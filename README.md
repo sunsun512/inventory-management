@@ -73,6 +73,19 @@ DB_SEED_MODE=never ./gradlew bootRun --args='--spring.profiles.active=local' # �
 ```
 모든 테스트는 Testcontainers로 띄운 실제 Postgres에 대해 실행되며(H2 등 인메모리 DB 미사용), 별도의 로컬 Postgres 없이도 동작합니다.
 
+## 테스트 커버리지
+JaCoCo로 측정합니다. `./gradlew test`가 끝나면 커버리지 리포트가 자동으로 생성됩니다.
+```bash
+./gradlew test
+open build/reports/jacoco/test/html/index.html   # macOS에서 HTML 리포트 열기
+```
+- 리포트는 `build/reports/jacoco/test/` 아래에 HTML(`html/index.html`, 사람이 보는 용)과 XML(`jacocoTestReport.xml`, CI·커버리지 도구 연동용)로 생성됩니다. 리포트만 다시 만들려면 `./gradlew jacocoTestReport`를 실행합니다.
+- 테스트가 Testcontainers를 사용하므로 측정할 때 Docker가 실행 중이어야 합니다. Docker 없이 실행하면 통합 테스트가 실패해 커버리지가 실제보다 낮게 나옵니다.
+- HTML 리포트에서 패키지·클래스별 라인/브랜치 커버리지를 확인할 수 있습니다. 소스 코드는 실행된 줄이 초록, 실행되지 않은 줄이 빨강, 조건의 일부 경우만 실행된 줄이 노랑으로 표시됩니다.
+  - 라인 커버리지: 코드 줄이 한 번이라도 실행됐는지를 셉니다.
+  - 브랜치 커버리지: `if`·`switch`·삼항 연산자 같은 조건에서 갈 수 있는 경우가 각각 실행됐는지를 셉니다. 재고 음수 방지, 중복 요청 거부, 락 타임아웃처럼 조건에 따라 동작이 달라지는 로직이 핵심이므로 브랜치 커버리지를 더 중요한 기준으로 봅니다.
+- 실행 로직이 거의 없는 애플리케이션 메인 클래스, `dto` 패키지, `common/config` 패키지는 측정에서 제외합니다(`build.gradle`의 `coverageExcludes`).
+
 # API 명세
 API 명세는 코드(springdoc-openapi)에서 생성되는 OpenAPI 문서로 제공합니다. 애플리케이션 실행 후 아래 주소에서 확인합니다.
 
