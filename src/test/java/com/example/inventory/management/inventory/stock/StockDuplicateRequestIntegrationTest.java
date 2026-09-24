@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -197,7 +196,9 @@ class StockDuplicateRequestIntegrationTest extends AbstractIntegrationTest {
     }
 
     private long historyCount(Long productId) {
-        return stockHistoryRepository.findByProductId(productId, Pageable.unpaged()).getTotalElements();
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM stock_history WHERE product_id = ?", Long.class, productId);
+        return count == null ? 0 : count;
     }
 
     private ResultActions postJson(String path, Map<String, Object> body) throws Exception {

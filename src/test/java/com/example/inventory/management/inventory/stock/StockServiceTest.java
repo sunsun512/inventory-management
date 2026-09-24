@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,9 +35,6 @@ class StockServiceTest extends AbstractIntegrationTest {
 
     @Autowired
     private ProductRepository productRepository;
-
-    @Autowired
-    private StockHistoryRepository stockHistoryRepository;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -105,8 +101,8 @@ class StockServiceTest extends AbstractIntegrationTest {
         Product product = productRepository.findById(productId).orElseThrow();
         assertThat(product.getQuantity()).isEqualTo(10L);
         assertThat(product.getName()).isEqualTo("기존 상품");
-        assertThat(stockHistoryRepository.findByProductId(productId, Pageable.unpaged())
-                .getTotalElements()).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM stock_history WHERE product_id = ?", Long.class, productId)).isZero();
     }
 
     @Test

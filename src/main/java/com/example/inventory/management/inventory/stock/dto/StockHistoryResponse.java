@@ -1,6 +1,5 @@
 package com.example.inventory.management.inventory.stock.dto;
 
-import com.example.inventory.management.inventory.stock.StockHistory;
 import com.example.inventory.management.inventory.stock.StockType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -15,16 +14,4 @@ public record StockHistoryResponse(
         @Schema(description = "요청 ID (소문자 UUID)", example = "3f1c2a9e-8b7d-4e21-9c3a-6d5e4f3b2a10") String requestId,
         @Schema(description = "처리 시각 (UTC)", example = "2026-09-23T14:37:35.511802Z") Instant createdAt
 ) {
-
-    public static StockHistoryResponse from(StockHistory history) {
-        return new StockHistoryResponse(
-                history.getId(),
-                history.getType(),
-                history.getQuantity(),
-                history.getBeforeQuantity(),
-                history.getAfterQuantity(),
-                history.getRequestId(),
-                history.getCreatedAt()
-        );
-    }
 }

@@ -62,7 +62,7 @@ public class StockService {
     public Page<StockHistoryResponse> getHistory(Long productId, Pageable pageable) {
         log.debug("재고 이력 조회: productId={}, page={}, size={}", productId, pageable.getPageNumber(), pageable.getPageSize());
         productService.getOrThrow(productId);
-        return stockHistoryRepository.findByProductId(productId, pageable).map(StockHistoryResponse::from);
+        return stockHistoryRepository.findHistories(productId, pageable);
     }
 
     /**
