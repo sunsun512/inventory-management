@@ -2,12 +2,32 @@ spring:
   application:
     name: inventory-management
 
+  datasource:
+    hikari:
+      data-source-properties:
+        # 세션 단위 Postgres 타임아웃. 상품 행 락을 오래 기다리거나(lock_timeout, SQLState 55P03)
+        # 쿼리가 오래 걸리면(statement_timeout, 57014) 커넥션을 무한정 붙잡지 않고 실패시킨다.
+        # 애플리케이션에서는 503 STOCK_LOCK_TIMEOUT으로 응답한다.
+        options: -c lock_timeout=${DB_LOCK_TIMEOUT:3s} -c statement_timeout=${DB_STATEMENT_TIMEOUT:5s}
+
   jpa:
     open-in-view: false
     properties:
       hibernate:
         jdbc:
           time_zone: UTC
+
+  jackson:
+    deserialization:
+      # 재고 수량은 정수만 허용한다. 기본값(true)이면 1.9가 1로 잘려 조용히 처리되므로 끈다.
+      accept-float-as-int: false
+
+  data:
+    web:
+      pageable:
+        # 페이지 크기 상한. 더 큰 size를 요청하면 오류 없이 100으로 제한된다.
+        max-page-size: 100
+
   flyway:
     enabled: true
     locations: classpath:db/migration

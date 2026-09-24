@@ -21,9 +21,9 @@ class ProductRepositoryTest extends AbstractIntegrationTest {
 
     @Test
     void 신규_상품_업서트시_상품이_등록된다() {
-        log.debug("신규 상품 업서트 테스트 시작: productCode=SKU-1");
+        log.debug("신규 상품 업서트 테스트 시작: productCode=SKU1");
         ProductRepository.UpsertResult result =
-                productRepository.upsertProductStock("SKU-1", "상품 A", 10L);
+                productRepository.upsertProductStock("SKU1", "상품 A", 10L);
 
         assertThat(result.getQuantity()).isEqualTo(10L);
         assertThat(result.getInserted()).isTrue();
@@ -33,11 +33,11 @@ class ProductRepositoryTest extends AbstractIntegrationTest {
 
     @Test
     void 기존_상품_업서트시_수량이_증가한다() {
-        log.debug("기존 상품 업서트 테스트 시작: productCode=SKU-2");
+        log.debug("기존 상품 업서트 테스트 시작: productCode=SKU2");
         ProductRepository.UpsertResult first =
-                productRepository.upsertProductStock("SKU-2", "상품 B", 10L);
+                productRepository.upsertProductStock("SKU2", "상품 B", 10L);
         ProductRepository.UpsertResult second =
-                productRepository.upsertProductStock("SKU-2", "상품 B", 5L);
+                productRepository.upsertProductStock("SKU2", "상품 B", 5L);
 
         assertThat(second.getId()).isEqualTo(first.getId());
         assertThat(second.getQuantity()).isEqualTo(15L);
@@ -47,9 +47,9 @@ class ProductRepositoryTest extends AbstractIntegrationTest {
 
     @Test
     void 수량_증가_쿼리는_증가된_수량을_반환한다() {
-        log.debug("수량 증가 쿼리 테스트 시작: productCode=SKU-3");
+        log.debug("수량 증가 쿼리 테스트 시작: productCode=SKU3");
         ProductRepository.UpsertResult created =
-                productRepository.upsertProductStock("SKU-3", "상품 C", 10L);
+                productRepository.upsertProductStock("SKU3", "상품 C", 10L);
 
         Optional<Long> after = productRepository.increaseQuantity(created.getId(), 7L);
 
@@ -59,9 +59,9 @@ class ProductRepositoryTest extends AbstractIntegrationTest {
 
     @Test
     void 재고가_충분하면_수량_감소에_성공한다() {
-        log.debug("재고 충분 시 수량 감소 테스트 시작: productCode=SKU-4");
+        log.debug("재고 충분 시 수량 감소 테스트 시작: productCode=SKU4");
         ProductRepository.UpsertResult created =
-                productRepository.upsertProductStock("SKU-4", "상품 D", 10L);
+                productRepository.upsertProductStock("SKU4", "상품 D", 10L);
 
         Optional<Long> after = productRepository.decreaseQuantityIfSufficient(created.getId(), 4L);
 
@@ -71,9 +71,9 @@ class ProductRepositoryTest extends AbstractIntegrationTest {
 
     @Test
     void 재고가_부족하면_빈_값을_반환하고_수량은_변하지_않는다() {
-        log.debug("재고 부족 시 수량 감소 테스트 시작: productCode=SKU-5");
+        log.debug("재고 부족 시 수량 감소 테스트 시작: productCode=SKU5");
         ProductRepository.UpsertResult created =
-                productRepository.upsertProductStock("SKU-5", "상품 E", 10L);
+                productRepository.upsertProductStock("SKU5", "상품 E", 10L);
 
         Optional<Long> after = productRepository.decreaseQuantityIfSufficient(created.getId(), 11L);
 

@@ -42,7 +42,7 @@ docker run -d --name inventory-postgres \
 ```bash
 ./gradlew bootRun --args='--spring.profiles.active=local'
 ```
-`application.yml`의 `spring.datasource.*`는 환경변수 `DB_URL` / `DB_USERNAME` / `DB_PASSWORD`로 덮어쓸 수 있습니다 (기본값은 위 로컬 Postgres 설정과 일치). 애플리케이션 기동 시 Flyway가 `src/main/resources/db/migration`의 마이그레이션을 자동 적용합니다.
+`application.yml`의 `spring.datasource.*`는 환경변수 `DB_URL` / `DB_USERNAME` / `DB_PASSWORD`로, DB 세션 타임아웃은 `DB_LOCK_TIMEOUT`(기본 `3s`) / `DB_STATEMENT_TIMEOUT`(기본 `5s`)으로 덮어쓸 수 있습니다 (기본값은 위 로컬 Postgres 설정과 일치). 애플리케이션 기동 시 Flyway가 `src/main/resources/db/migration`의 마이그레이션을 자동 적용합니다.
 
 ## 테스트 실행
 ```bash
@@ -57,19 +57,22 @@ docker run -d --name inventory-postgres \
 | POST | `/api/v1/stocks/inbound` | 입고 |
 | POST | `/api/v1/stocks/outbound` | 출고 |
 | GET | `/api/v1/products/{productId}/stock` | 현재 재고 조회 |
-| GET | `/api/v1/products/{productId}/stock-histories` | 재고 변경 이력 조회 (페이징, 최신순) |
+| GET | `/api/v1/products/{productId}/stock-histories` | 재고 변경 이력 조회 (페이징, 기본 정렬 `id DESC` = 실제 반영 역순, `sort`는 `id`/`createdAt`만 허용, `size` 최대 100) |
 
 ### POST /api/v1/stocks/inbound
 ```json
 {
   "productId": 1,
-  "productCode": "SKU-1",
+  "productCode": "SKU1",
   "productName": "상품 A",
   "quantity": 10,
   "requestId": "01K..."
 }
 ```
-- 기존 상품에 입고할 경우 `productId`를, 신규 상품을 등록하며 입고할 경우 `productCode`와 `productName`을 전달합니다 (`productId`가 없으면 두 필드가 모두 필요).
+- 기존 상품에 입고할 경우 `productId`를, 신규 상품을 등록하며 입고할 경우 `productCode`와 `productName`을 전달합니다 (`productId`가 없으면 두 필드가 모두 필요). `productCode`로 이미 등록된 상품이면 해당 상품에 입고됩니다.
+- `productId`와 `productCode`를 함께 보내면, `productCode`가 해당 상품의 코드와 **정확히** 일치해야 합니다 (정규화 없음). 일치하지 않으면 재고를 변경하지 않고 400 `PRODUCT_CODE_MISMATCH`를 반환합니다. `productId`의 상품이 없으면 404 `PRODUCT_NOT_FOUND`입니다.
+- `productCode`는 영문 대문자와 숫자로만 구성되어야 합니다 (`^[A-Z0-9]+$`, 최대 64자). 소문자·하이픈·공백·기타 기호는 변환하지 않고 400 `VALIDATION_FAILED`로 거부합니다.
+- `quantity`는 1 이상 10,000 이하의 **정수**입니다. `1.9`, `2.0` 같은 소수는 잘라내지 않고 400 `VALIDATION_FAILED`로 거부하며, 10,000 초과는 409 `QUANTITY_LIMIT_EXCEEDED`입니다 (출고도 동일).
 - `requestId`는 클라이언트가 생성하는 멱등성 키입니다. 동일한 `requestId`로 재요청하면 재고를 다시 반영하지 않고 최초 처리 결과를 그대로 반환합니다.
 
 ### POST /api/v1/stocks/outbound
@@ -85,7 +88,7 @@ docker run -d --name inventory-postgres \
 ```json
 {
   "productId": 1,
-  "productCode": "SKU-1",
+  "productCode": "SKU1",
   "type": "INBOUND",
   "quantity": 10,
   "beforeQuantity": 0,
@@ -106,48 +109,40 @@ docker run -d --name inventory-postgres \
 
 | 상황 | HTTP | code |
 |---|---|---|
-| `quantity` 등 요청 값이 유효하지 않음 | 400 | `VALIDATION_FAILED` |
+| 요청 값이 유효하지 않음 (필수값 누락, `quantity` ≤ 0, 소수·문자열 `quantity`, `productCode` 형식 오류, JSON 형식 오류, 본문 누락, 경로 변수 타입 오류(`/products/abc/stock`), 허용되지 않은 `sort` 속성 등) | 400 | `VALIDATION_FAILED` |
+| `productId`와 `productCode`가 가리키는 상품이 다름 | 400 | `PRODUCT_CODE_MISMATCH` |
 | 상품 없음 | 404 | `PRODUCT_NOT_FOUND` |
+| 존재하지 않는 API 경로 | 404 | `NOT_FOUND` |
+| 지원하지 않는 HTTP 메서드 | 405 (`Allow` 헤더 포함) | `METHOD_NOT_ALLOWED` |
+| 응답할 수 없는 `Accept` (예: `application/xml`) | 406 | - (본문 없음) |
+| 지원하지 않는 `Content-Type` (예: `text/plain`, 누락) | 415 | `UNSUPPORTED_MEDIA_TYPE` |
 | 재고 부족 | 409 | `INSUFFICIENT_STOCK` |
+| 1회 요청 `quantity`가 10,000 초과 | 409 | `QUANTITY_LIMIT_EXCEEDED` |
+| 입고 결과 재고가 저장 가능한 최대값(BIGINT) 초과 | 409 | `STOCK_QUANTITY_OVERFLOW` |
+| 상품 행 락 대기(`lock_timeout`) / 쿼리 실행(`statement_timeout`) / 트랜잭션 시간 초과 | 503 (`Retry-After: 1`) | `STOCK_LOCK_TIMEOUT` |
 | 동일 `requestId` 재요청 | 200 (최초 처리 결과 그대로 반환) | - |
 | 서버 오류 | 500 | `INTERNAL_ERROR` |
 
+- 한도 초과(`QUANTITY_LIMIT_EXCEEDED`)와 다른 검증 오류가 함께 있으면 400 `VALIDATION_FAILED`가 우선합니다.
+- 503은 요청이 반영되지 않고 롤백된 상태이므로 같은 `requestId`로 안전하게 재시도할 수 있습니다.
+- Spring MVC 표준 예외는 원래 상태 코드를 유지하고 본문만 위 형식으로 바꿉니다. `code`는 400이면 `VALIDATION_FAILED`, 500이면 `INTERNAL_ERROR`, 그 밖에는 HTTP 상태 이름(`NOT_FOUND`, `METHOD_NOT_ALLOWED`, `UNSUPPORTED_MEDIA_TYPE` 등)입니다.
+
 # 설계
 
-## 아키텍처
-Product / Stock / History를 별도 서비스로 나누지 않고 단일 Spring Boot 애플리케이션 + 단일 PostgreSQL로 구성했습니다. 재고 변경에는 트랜잭션 정합성이 핵심인데, 서비스를 분리하면 단순한 DB 트랜잭션으로 해결되던 문제가 분산 트랜잭션·최종적 일관성 문제로 확대되기 때문입니다. 향후 트래픽/도메인 규모가 커지면 분리를 재검토할 수 있습니다.
+## 요청 검증 / 수량 한도
+- `quantity`는 정수만 허용합니다. Jackson의 기본 동작(`ACCEPT_FLOAT_AS_INT`)은 `1.9`를 `1`로 조용히 잘라 처리하므로 `spring.jackson.deserialization.accept-float-as-int: false`로 끄고, 본문 해석 실패(`HttpMessageNotReadableException`)는 400으로 응답합니다.
+- 1회 요청 수량 한도(10,000)는 합성 제약 `@QuantityLimit`(`@Max(10000)`)으로 검증합니다. 형식 오류가 아닌 비즈니스 규칙 위반이므로 409 `QUANTITY_LIMIT_EXCEEDED`로 구분합니다.
+- 입고로 누적 재고가 `BIGINT` 범위를 넘으면 Postgres가 SQLState `22003`으로 실패합니다. 이를 409 `STOCK_QUANTITY_OVERFLOW`로 변환하며, `requestId` 중복(`23505`)으로 오인해 재조회하지 않도록 SQLState로 구분합니다.
 
-패키지는 계층형이 아닌 도메인 기준으로 구성했습니다 (`product`, `stock`, `common`).
+## 상품 코드
+- `productCode`는 클라이언트가 지정하며 서버는 정규화(trim/대문자 변환)하지 않고 그대로 저장·비교합니다. 대신 `^[A-Z0-9]+$` 형식이 아니면 거부해, 대소문자·공백 차이로 같은 상품이 다른 코드로 등록되는 것을 입구에서 막습니다. (기존 데이터에는 적용하지 않으며 DB `CHECK` 제약은 두지 않았습니다.)
+- `productId`와 `productCode`를 함께 받으면 두 값이 같은 상품을 가리키는지 검증해, 잘못된 상품에 입고되는 것을 막습니다.
 
-## 데이터 모델
-- `product`: 현재 재고 상태 (`quantity`), 상품 식별을 위한 `product_code`(UNIQUE, 비즈니스 키). 이름은 "아이폰 17" vs "iPhone 17"처럼 신뢰할 수 없어 식별자로 사용하지 않습니다.
-- `stock_history`: 재고 변경 이력 (`before_quantity`, `after_quantity`, `type`, `request_id`). "현재 재고가 왜 이 값인가"를 설명하는 감사 추적(audit trail) 역할입니다.
+## 재고 이력 정렬
+- 상품별 재고 변경은 상품 행 락(원자적 `UPDATE`) 아래에서 순서대로 반영되고 이력은 같은 트랜잭션에서 저장되므로, 상품별 이력 `id`는 실제 반영 순서와 일치합니다. 반면 `created_at`은 애플리케이션 서버 시각이라 서버 간 시계 차이로 순서가 뒤바뀔 수 있어, 기본 정렬을 `id DESC`로 합니다.
+- `V3` 마이그레이션으로 `(product_id, id DESC)` 인덱스를 추가해 정렬 없이 인덱스 순서대로 페이지를 읽습니다. 기존 `(product_id, created_at DESC)` 인덱스는 파괴적 변경을 피하기 위해 유지합니다.
 
-## 재고 정합성 / 동시성 제어
-`SELECT` 후 애플리케이션에서 계산하여 `UPDATE`하는 방식(Lost Update 위험)을 쓰지 않고, PostgreSQL의 원자적 조건부 `UPDATE ... RETURNING`을 사용합니다.
-```sql
-UPDATE product SET quantity = quantity - :quantity
-WHERE id = :id AND quantity >= :quantity
-RETURNING quantity
-```
-조건을 만족하지 못하면(재고 부족) 0건이 반영되어 애플리케이션은 이를 감지해 `InsufficientStockException`을 반환합니다. `RETURNING`으로 변경 후 수량을 원자적으로 함께 받아오므로, 재고 이력에 기록되는 `before/after` 값이 별도의 재조회 없이 항상 실제 커밋된 값과 일치합니다.
-
-신규 상품 등록 + 입고는 `INSERT ... ON CONFLICT (product_code) DO UPDATE`로 하나의 원자적 문장으로 처리하여, 동일한 신규 상품에 대한 동시 등록 경쟁도 DB 레벨에서 해결합니다.
-
-방어는 여러 단계로 둡니다: 요청 검증(`quantity > 0`) → 서비스 로직 → 원자적 SQL → DB `CHECK (quantity >= 0)` 제약(애플리케이션 버그가 있어도 음수 재고가 저장되지 않는 최후 방어선).
-
-이 방식을 `SELECT ... FOR UPDATE` 비관적 락 대신 선택한 이유는, 한 번의 왕복으로 처리되고 락 대기 체인이 생기지 않기 때문입니다. 다중 서버 환경에서도 PostgreSQL 자체가 유일한 정합성 소스이므로 Redis 분산 락은 도입하지 않았습니다.
-
-## 멱등성
-`stock_history.request_id`에 UNIQUE 제약을 두어, 동일한 `requestId`로 재요청이 오면 재고를 다시 반영하지 않고 최초 처리 결과를 그대로 반환합니다(409가 아닌 200). 네트워크 재시도 등으로 인한 중복 요청은 비즈니스 충돌이 아니라 "같은 요청"이기 때문입니다.
-
-## 트랜잭션 경계
-재고 수량 변경과 이력 저장은 하나의 트랜잭션에서 처리됩니다. 이력 저장이 실패하면 수량 변경도 함께 롤백되어, "재고는 바뀌었는데 이력이 없는" 정합성 불일치를 방지합니다.
-
-## 테스트
-- Testcontainers로 실제 PostgreSQL에 대해 테스트를 실행합니다 (H2 등 인메모리 DB로는 원자적 `UPDATE`/락/`ON CONFLICT` 동작을 정확히 재현할 수 없기 때문).
-- `StockServiceConcurrencyTest`: 재고 100개에서 10개씩 10스레드가 동시에 출고하면 전량 성공하고 최종 재고가 0이 되는지, 20스레드가 동시에 출고하면 정확히 10개만 성공(나머지는 재고 부족)하고 최종 재고가 0이 되는지 검증합니다.
-
-## 가정 및 향후 확장 여지
-- 재고 단위는 항상 정수("개")라고 가정하여 `quantity`를 `BIGINT`/`Long`으로 설계했습니다. kg, m 등 소수 단위 재고가 필요해지면 `NUMERIC`으로의 스키마 변경이 필요합니다.
-- 상품 삭제 기능은 요구사항에 없어 설계하지 않았습니다.
+## 락 / 쿼리 타임아웃
+- Hikari `data-source-properties.options`로 커넥션마다 Postgres `lock_timeout`(기본 3s)과 `statement_timeout`(기본 5s)을 설정합니다. 특정 상품에 요청이 몰리거나 락을 오래 잡는 트랜잭션이 있어도 요청 스레드와 커넥션을 무한정 붙잡지 않습니다.
+- `lock_timeout`(55P03)은 `CannotAcquireLockException`, `statement_timeout`(57014)은 `QueryTimeoutException`으로 변환되며, 트랜잭션 타임아웃(`TransactionTimedOutException`)과 함께 503 `STOCK_LOCK_TIMEOUT`으로 응답합니다.
+- `StockLockTimeoutIntegrationTest`는 별도 커넥션에서 `SELECT ... FOR UPDATE`로 상품 행 락을 잡은 상태에서 출고 요청이 503을 받고 재고·이력이 변하지 않는지 검증합니다.
