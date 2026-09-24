@@ -31,18 +31,38 @@ Develop
 
 ## 로컬 Postgres 준비
 ```bash
-docker run -d --name inventory-postgres \
-  -e POSTGRES_DB=inventory \
-  -e POSTGRES_USER=inventory-user \
-  -e POSTGRES_PASSWORD=inventory-password \
-  -p 5432:5432 postgres:16-alpine
+docker compose -f local/docker-compose.yml up -d
 ```
+`local/docker-compose.yml`은 `postgres:17.5` 컨테이너(`postgresql`)를 `5432` 포트로 띄웁니다. DB `inventory`, 사용자 `inventory-user`, 비밀번호 `inventory-password`이고, 데이터는 `postgres` 볼륨에 유지됩니다. 중지는 `docker compose -f local/docker-compose.yml down`입니다(`-v`를 붙이면 볼륨의 데이터까지 삭제됩니다).
 
 ## 애플리케이션 실행
 ```bash
 ./gradlew bootRun --args='--spring.profiles.active=local'
 ```
 DB 접속 설정(`spring.datasource.*`)은 `local` 프로필 전용 파일인 `application-local.yml`에 있습니다. 접속 URL은 `jdbc:postgresql://localhost:5432/inventory`로 고정되어 있어 `DB_URL` 같은 환경변수로는 바꿀 수 없고, 사용자/비밀번호는 `DB_USERNAME` / `DB_PASSWORD`(기본 `inventory-user` / `inventory-password`), 커넥션 풀 크기는 `DB_POOL_MAX_SIZE`(기본 `10`) / `DB_POOL_MIN_IDLE`(기본 `4`)로 덮어쓸 수 있습니다. DB 세션 타임아웃은 공통 설정 `application.yml`에 있으며 `DB_LOCK_TIMEOUT`(기본 `3s`) / `DB_STATEMENT_TIMEOUT`(기본 `5s`)으로 덮어쓸 수 있습니다 (기본값은 위 로컬 Postgres 설정과 일치). 애플리케이션 기동 시 Flyway가 `src/main/resources/db/migration`의 마이그레이션을 자동 적용합니다.
+
+## 로컬 시드 데이터
+```bash
+./gradlew bootRun --args='--spring.profiles.active=local,seed'
+```
+- `seed` 프로필을 함께 켜면 애플리케이션이 기동하면서 상품 10,000개와 상품별 재고 요청 이력 8~12건(총 약 10만 건)을 생성합니다. 약 20초 걸리고, 이후에는 평소처럼 API 서버로 동작합니다.
+- **`product`와 `stock_history`가 모두 비어 있을 때만 생성합니다.** 데이터가 하나라도 있으면 아무것도 지우거나 추가하지 않고 건너뜁니다. 따라서 `seed` 프로필을 켠 채로 다시 기동해도 안전합니다. 데이터를 새로 만들고 싶으면 테이블을 직접 비운 뒤 기동합니다.
+- 시드 SQL은 Flyway 마이그레이션이 아닙니다. `src/main/resources/db/seed/local-seed-data.sql`에 있고, Flyway는 `db/migration`만 읽기 때문에 테스트나 다른 환경에는 적용되지 않습니다. `seed` 프로필에서만 등록되는 `LocalSeedDataRunner`(`ApplicationRunner`)가 Flyway 마이그레이션이 끝난 뒤 이 파일을 하나의 트랜잭션으로 실행합니다.
+- 공통 설정의 `statement_timeout`(기본 5s)보다 오래 걸리므로, 시드 트랜잭션 안에서만 `SET LOCAL statement_timeout = 0`으로 해제합니다. `lock_timeout`은 그대로 적용됩니다.
+- 생성 방식
+  1. 상품: `generate_series`로 10,000행을 만들고, 카테고리 8종의 접두어와 6자리 일련번호로 `productCode`를 만듭니다(예: `FOOD000072`, `^[A-Z0-9]+$`). 상품명은 카테고리·품목·옵션을 조합합니다(예: `[식품] 그래놀라 미니 10호`).
+  2. 이력: 재귀 CTE로 모든 상품의 n번째 요청을 한 단계씩 동시에 생성합니다. 이렇게 하면 `beforeQuantity`/`afterQuantity`가 끊기지 않고 이어집니다.
+     - 첫 요청은 신규 상품 등록 입고(`beforeQuantity` = 0)입니다.
+     - 이후 요청은 입고 55% / 출고 45%이며, 재고가 0이면 반드시 입고입니다.
+     - 수량은 1회 1~10,000 범위입니다. 대량 입고와 전량 출고(품절)도 일부 섞여 있어 재고 0인 상품이 생깁니다.
+     - 요청 간격은 10분~3일이고, 전체 기간은 약 180일 전부터 현재까지입니다.
+  3. INSERT: 상품은 등록 시각 순으로 넣습니다. 이력은 전체를 `created_at` 순으로 넣어 상품별 이력 `id` 순서가 실제 반영 순서와 같게 합니다([재고 이력 정렬](#재고-이력-정렬) 전제). `requestId`는 `gen_random_uuid()`로 만든 소문자 UUID입니다.
+  4. 검증: 커밋 전에 다음을 확인하고, 하나라도 어긋나면 전체를 롤백합니다.
+     - 이력 사이의 수량이 이어지는지
+     - `product.quantity`가 마지막 이력의 `afterQuantity`와 같은지
+     - 상품별 `id` 순서와 `created_at` 순서가 같은지
+     - 첫 이력이 신규 등록 입고인지
+- `setseed`로 난수 시드를 고정해 상품 구성과 수량은 매번 같게 생성됩니다. `requestId`만 실행할 때마다 달라집니다. 다른 데이터가 필요하면 `local-seed-data.sql`의 `setseed` 값을 바꿉니다.
 
 ## 테스트 실행
 ```bash
@@ -51,99 +71,10 @@ DB 접속 설정(`spring.datasource.*`)은 `local` 프로필 전용 파일인 `a
 모든 테스트는 Testcontainers로 띄운 실제 Postgres에 대해 실행되며(H2 등 인메모리 DB 미사용), 별도의 로컬 Postgres 없이도 동작합니다.
 
 # API 명세
+API 명세는 코드(springdoc-openapi)에서 생성되는 OpenAPI 문서로 제공합니다. 애플리케이션 실행 후 아래 주소에서 확인합니다.
 
-| Method | Path | 설명|
-|---|---|---|
-| POST | `/api/v1/stocks/inbound` | 입고 |
-| POST | `/api/v1/stocks/outbound` | 출고 |
-| GET | `/api/v1/products/{productId}/stock` | 현재 재고 조회 |
-| GET | `/api/v1/products/{productId}/stock-histories` | 재고 변경 이력 조회 (페이징, 기본 정렬 `id DESC` = 실제 반영 역순, `sort`는 `id`/`createdAt`만 허용, `size` 최대 100) |
-
-### POST /api/v1/stocks/inbound
-기존 상품에 입고하거나, 등록되지 않은 상품을 신규 등록하며 입고합니다. `productId` 유무로 구분합니다.
-
-| 필드 | 타입 | 기존 상품 입고 | 신규 상품 등록 입고 | 규칙 |
-|---|---|---|---|---|
-| `productId` | 정수 | **필수** | 보내지 않음 | DB가 발급한 상품 ID |
-| `productCode` | 문자열 | **필수** | **필수** | `^[A-Z0-9]+$`, 최대 64자 |
-| `productName` | 문자열 | 선택 (무시됨) | **필수** | 1~255자 |
-| `quantity` | 정수 | **필수** | **필수** | 1 이상 10,000 이하 |
-| `requestId` | 문자열 | **필수** | **필수** | UUID (아래 공통 규칙) |
-
-```json
-{ "productId": 1, "productCode": "SKU1", "quantity": 10, "requestId": "3f1c2a9e-8b7d-4e21-9c3a-6d5e4f3b2a10" }
-```
-```json
-{ "productCode": "SKU2", "productName": "상품 B", "quantity": 10, "requestId": "0b8e7d6c-5a4f-4e3d-8c2b-1a0f9e8d7c6b" }
-```
-- **기존 상품 입고**: `productId`의 상품이 없으면 404 `PRODUCT_NOT_FOUND`, `productCode`가 그 상품의 코드와 **정확히** 일치하지 않으면 400 `PRODUCT_CODE_MISMATCH`이며 재고는 변경되지 않습니다. `productName`은 보내도 무시되며 상품명을 바꾸지 않습니다.
-- **신규 상품 등록 입고**: `productCode`가 없는 코드면 해당 코드·이름으로 상품을 등록하고 수량을 입고합니다(`beforeQuantity` = 0). 이미 등록된 코드면 기존 상품에 재고를 더하지 않고 409 `PRODUCT_CODE_ALREADY_EXISTS`로 거부합니다. 같은 신규 코드로 동시에 등록하면 정확히 한 건만 성공하고 나머지는 409 `PRODUCT_CODE_ALREADY_EXISTS`입니다.
-
-### POST /api/v1/stocks/outbound
-
-| 필드 | 타입 | 필수 | 규칙 |
-|---|---|---|---|
-| `productId` | 정수 | **필수** | DB가 발급한 상품 ID |
-| `productCode` | 문자열 | **필수** | `^[A-Z0-9]+$`, 최대 64자, 해당 상품의 코드와 정확히 일치 |
-| `quantity` | 정수 | **필수** | 1 이상 10,000 이하, 현재 재고 이하 |
-| `requestId` | 문자열 | **필수** | UUID (아래 공통 규칙) |
-
-```json
-{ "productId": 1, "productCode": "SKU1", "quantity": 5, "requestId": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d" }
-```
-- `productName` 등 위 표에 없는 필드는 400 `VALIDATION_FAILED`입니다. `productCode`가 상품과 일치하지 않으면 400 `PRODUCT_CODE_MISMATCH`, 상품이 없으면 404 `PRODUCT_NOT_FOUND`, 재고가 부족하면 409 `INSUFFICIENT_STOCK`입니다.
-
-### 입고/출고 공통 규칙
-- **`productCode`**: 영문 대문자와 숫자로만 구성됩니다 (`^[A-Z0-9]+$`, 최대 64자). 소문자·하이픈·공백·기타 기호는 변환(정규화)하지 않고 400 `VALIDATION_FAILED`로 거부합니다.
-- **`requestId`**: 클라이언트가 생성하는 표준 UUID 문자열입니다 (8-4-4-4-12 형식의 16진수, 하이픈 포함 36자, 버전 무관). 대소문자 모두 허용하며 조회·저장 전에 소문자로 정규화하므로 대소문자만 다른 값은 같은 키입니다. 그 외 형식(숫자 `123` 포함)은 400 `VALIDATION_FAILED`입니다.
-- **`quantity`**: 1 이상 10,000 이하의 **정수**입니다. `1.9`, `2.0` 같은 소수는 잘라내지 않고 400 `VALIDATION_FAILED`로 거부하며, 10,000 초과는 409 `QUANTITY_LIMIT_EXCEEDED`입니다.
-- **엄격한 JSON**: 정수 필드(`quantity`, `productId`)에 문자열(`"5"`, `"1"`)을 보내면 변환하지 않고 400 `VALIDATION_FAILED`, 정의되지 않은 필드가 있으면 400 `VALIDATION_FAILED`입니다.
-- **중복 요청**: 하나의 `requestId`는 트랜잭션이 처음으로 성공 커밋된 요청 한 건만 처리합니다. 이후의 요청이나 동시에 들어온 요청은 요청 내용과 관계없이 409 `DUPLICATE_REQUEST`를 받으며, 본문에 최초 처리 결과는 포함되지 않습니다. 성공한 요청만 저장되므로 실패한 요청(400/404/409/503)과 같은 `requestId`로 다시 요청하면 정상 처리됩니다.
-- **검사 순서**: 요청 검증(400) → 중복 `requestId`(409 `DUPLICATE_REQUEST`) → 비즈니스 검사(404 `PRODUCT_NOT_FOUND` / 409 `INSUFFICIENT_STOCK` / 409 `PRODUCT_CODE_ALREADY_EXISTS` / 400 `PRODUCT_CODE_MISMATCH`). 예를 들어 이미 성공한 출고를 다시 보내면 재고가 부족해졌더라도 `INSUFFICIENT_STOCK`이 아닌 `DUPLICATE_REQUEST`입니다.
-
-### 응답 (입고/출고 공통)
-```json
-{
-  "productId": 1,
-  "productCode": "SKU1",
-  "type": "INBOUND",
-  "quantity": 10,
-  "beforeQuantity": 0,
-  "afterQuantity": 10,
-  "requestId": "3f1c2a9e-8b7d-4e21-9c3a-6d5e4f3b2a10",
-  "createdAt": "2026-09-23T14:37:35.511802Z"
-}
-```
-
-### 에러 응답
-```json
-{
-  "code": "INSUFFICIENT_STOCK",
-  "message": "재고가 부족합니다. productId=1",
-  "timestamp": "2026-09-23T14:37:42.931304Z"
-}
-```
-
-| 상황 | HTTP | code |
-|---|---|---|
-| 요청 값이 유효하지 않음 (필수값 누락, `quantity` ≤ 0, 소수 `quantity`, 문자열로 보낸 숫자(`"5"`), 정의되지 않은 필드, `productCode` 형식 오류, `requestId` UUID 형식 오류, JSON 형식 오류, 본문 누락, 경로 변수 타입 오류(`/products/abc/stock`), 허용되지 않은 `sort` 속성 등) | 400 | `VALIDATION_FAILED` |
-| `productCode`가 `productId` 상품의 코드와 다름 (입고/출고) | 400 | `PRODUCT_CODE_MISMATCH` |
-| 상품 없음 | 404 | `PRODUCT_NOT_FOUND` |
-| 존재하지 않는 API 경로 | 404 | `NOT_FOUND` |
-| 지원하지 않는 HTTP 메서드 | 405 (`Allow` 헤더 포함) | `METHOD_NOT_ALLOWED` |
-| 응답할 수 없는 `Accept` (예: `application/xml`) | 406 | - (본문 없음) |
-| 지원하지 않는 `Content-Type` (예: `text/plain`, 누락) | 415 | `UNSUPPORTED_MEDIA_TYPE` |
-| 재고 부족 | 409 | `INSUFFICIENT_STOCK` |
-| 이미 성공 처리된 `requestId`로 재요청 (동시 요청 포함, 요청 내용 무관) | 409 (최초 처리 결과 미포함) | `DUPLICATE_REQUEST` |
-| 신규 상품 등록 입고(`productId` 없음)인데 `productCode`가 이미 등록됨 | 409 | `PRODUCT_CODE_ALREADY_EXISTS` |
-| 1회 요청 `quantity`가 10,000 초과 | 409 | `QUANTITY_LIMIT_EXCEEDED` |
-| 입고 결과 재고가 저장 가능한 최대값(BIGINT) 초과 | 409 | `STOCK_QUANTITY_OVERFLOW` |
-| 상품 행 락·`requestId` 락 대기(`lock_timeout`) / 쿼리 실행(`statement_timeout`) / 트랜잭션 시간 초과 | 503 (`Retry-After: 1`) | `STOCK_LOCK_TIMEOUT` |
-| 서버 오류 | 500 | `INTERNAL_ERROR` |
-
-- 한도 초과(`QUANTITY_LIMIT_EXCEEDED`)와 다른 검증 오류가 함께 있으면 400 `VALIDATION_FAILED`가 우선합니다.
-- 503은 요청이 반영되지 않고 롤백된 상태이므로 같은 `requestId`로 안전하게 재시도할 수 있습니다.
-- Spring MVC 표준 예외는 원래 상태 코드를 유지하고 본문만 위 형식으로 바꿉니다. `code`는 400이면 `VALIDATION_FAILED`, 500이면 `INTERNAL_ERROR`, 그 밖에는 HTTP 상태 이름(`NOT_FOUND`, `METHOD_NOT_ALLOWED`, `UNSUPPORTED_MEDIA_TYPE` 등)입니다.
+- Swagger UI: http://localhost:8080/swagger-ui/index.html
+- OpenAPI JSON: http://localhost:8080/v3/api-docs
 
 # 설계
 
