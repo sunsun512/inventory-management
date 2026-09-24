@@ -1,6 +1,6 @@
 package com.example.inventory.management.common.exception;
 
-import com.example.inventory.management.product.ProductService;
+import com.example.inventory.management.product.query.ProductQueryService;
 import com.example.inventory.management.support.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +44,7 @@ class GlobalExceptionHandlerIntegrationTest extends AbstractIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @MockitoSpyBean
-    private ProductService productService;
+    private ProductQueryService productQueryService;
 
     private Long productId;
 
@@ -200,7 +200,7 @@ class GlobalExceptionHandlerIntegrationTest extends AbstractIntegrationTest {
     @Test
     void 예상치_못한_예외는_500_INTERNAL_ERROR를_반환한다() throws Exception {
         doThrow(new IllegalStateException("의도된 테스트 예외"))
-                .when(productService).getOrThrow(UNEXPECTED_FAILURE_PRODUCT_ID);
+                .when(productQueryService).getStock(UNEXPECTED_FAILURE_PRODUCT_ID);
 
         mockMvc.perform(get("/api/v1/products/{id}/stock", UNEXPECTED_FAILURE_PRODUCT_ID))
                 .andExpect(status().isInternalServerError())
