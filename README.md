@@ -42,12 +42,15 @@ docker compose -f local/docker-compose.yml up -d
 DB 접속 설정(`spring.datasource.*`)은 `local` 프로필 전용 파일인 `application-local.yml`에 있습니다. 접속 URL은 `jdbc:postgresql://localhost:5432/inventory`로 고정되어 있어 `DB_URL` 같은 환경변수로는 바꿀 수 없고, 사용자/비밀번호는 `DB_USERNAME` / `DB_PASSWORD`(기본 `inventory-user` / `inventory-password`), 커넥션 풀 크기는 `DB_POOL_MAX_SIZE`(기본 `10`) / `DB_POOL_MIN_IDLE`(기본 `4`)로 덮어쓸 수 있습니다. DB 세션 타임아웃은 공통 설정 `application.yml`에 있으며 `DB_LOCK_TIMEOUT`(기본 `3s`) / `DB_STATEMENT_TIMEOUT`(기본 `5s`)으로 덮어쓸 수 있습니다 (기본값은 위 로컬 Postgres 설정과 일치). 애플리케이션 기동 시 Flyway가 `src/main/resources/db/migration`의 마이그레이션을 자동 적용합니다.
 
 ## 로컬 시드 데이터
+`local` 프로필로 기동하면 기본으로 상품 10,000개와 상품별 재고 요청 이력 8~12건(총 약 10만 건)을 생성합니다. 약 20초 걸리고, 이후에는 평소처럼 API 서버로 동작합니다.
 ```bash
-./gradlew bootRun --args='--spring.profiles.active=local,seed'
+./gradlew bootRun --args='--spring.profiles.active=local'                    # 시드 on (기본)
+DB_SEED_MODE=never ./gradlew bootRun --args='--spring.profiles.active=local' # 시드 off
 ```
-- `seed` 프로필을 함께 켜면 애플리케이션이 기동하면서 상품 10,000개와 상품별 재고 요청 이력 8~12건(총 약 10만 건)을 생성합니다. 약 20초 걸리고, 이후에는 평소처럼 API 서버로 동작합니다.
-- **`product`와 `stock_history`가 모두 비어 있을 때만 생성합니다.** 데이터가 하나라도 있으면 아무것도 지우거나 추가하지 않고 건너뜁니다. 따라서 `seed` 프로필을 켠 채로 다시 기동해도 안전합니다. 데이터를 새로 만들고 싶으면 테이블을 직접 비운 뒤 기동합니다.
-- 시드 SQL은 Flyway 마이그레이션이 아닙니다. `src/main/resources/db/seed/local-seed-data.sql`에 있고, Flyway는 `db/migration`만 읽기 때문에 테스트나 다른 환경에는 적용되지 않습니다. `seed` 프로필에서만 등록되는 `LocalSeedDataRunner`(`ApplicationRunner`)가 Flyway 마이그레이션이 끝난 뒤 이 파일을 하나의 트랜잭션으로 실행합니다.
+- **`product`와 `stock_history`가 모두 비어 있을 때만 생성합니다.** 데이터가 하나라도 있으면 아무것도 지우거나 추가하지 않고 건너뜁니다. 따라서 켜 둔 채로 다시 기동해도 안전합니다. 데이터를 새로 만들고 싶으면 테이블을 직접 비운 뒤 기동합니다.
+- 시드 SQL은 Flyway 마이그레이션이 아닌 `src/main/resources/data.sql`이며, Spring Boot SQL 초기화(`spring.sql.init`)가 Flyway 마이그레이션 뒤에 실행합니다. `application-local.yml`에서만 `spring.sql.init.mode: ${DB_SEED_MODE:always}`로 켜고, 공통 설정은 기본값(`embedded`)이라 Postgres를 쓰는 테스트나 다른 환경에서는 실행되지 않습니다.
+- `spring.jpa.defer-datasource-initialization`은 쓰지 않습니다. 켜면 Flyway와 `entityManagerFactory` 사이에 순환 의존이 생겨 기동에 실패하고, 켜지 않아도 `data.sql`은 Flyway 뒤에 실행됩니다.
+- `spring.sql.init`은 문장마다 자동 커밋하므로 스크립트 전체를 `BEGIN; ... COMMIT;`으로 감싸 하나의 트랜잭션으로 실행합니다. 또 `DO $$ ... $$` 블록 안의 `;`에서 문장이 잘리지 않도록 `spring.sql.init.separator`를 스크립트 끝 구분자(`^^^ END OF SCRIPT ^^^`)로 두어 파일 전체를 한 번에 실행합니다.
 - 공통 설정의 `statement_timeout`(기본 5s)보다 오래 걸리므로, 시드 트랜잭션 안에서만 `SET LOCAL statement_timeout = 0`으로 해제합니다. `lock_timeout`은 그대로 적용됩니다.
 - 생성 방식
   1. 상품: `generate_series`로 10,000행을 만들고, 카테고리 8종의 접두어와 6자리 일련번호로 `productCode`를 만듭니다(예: `FOOD000072`, `^[A-Z0-9]+$`). 상품명은 카테고리·품목·옵션을 조합합니다(예: `[식품] 그래놀라 미니 10호`).
@@ -62,7 +65,7 @@ DB 접속 설정(`spring.datasource.*`)은 `local` 프로필 전용 파일인 `a
      - `product.quantity`가 마지막 이력의 `afterQuantity`와 같은지
      - 상품별 `id` 순서와 `created_at` 순서가 같은지
      - 첫 이력이 신규 등록 입고인지
-- `setseed`로 난수 시드를 고정해 상품 구성과 수량은 매번 같게 생성됩니다. `requestId`만 실행할 때마다 달라집니다. 다른 데이터가 필요하면 `local-seed-data.sql`의 `setseed` 값을 바꿉니다.
+- `setseed`로 난수 시드를 고정해 상품 구성과 수량은 매번 같게 생성됩니다. `requestId`만 실행할 때마다 달라집니다. 다른 데이터가 필요하면 `data.sql`의 `setseed` 값을 바꿉니다.
 
 ## 테스트 실행
 ```bash
