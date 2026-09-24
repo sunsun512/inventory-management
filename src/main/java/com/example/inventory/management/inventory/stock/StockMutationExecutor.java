@@ -1,7 +1,10 @@
 package com.example.inventory.management.inventory.stock;
 
 import com.example.inventory.management.inventory.common.exception.InsufficientStockException;
+import com.example.inventory.management.inventory.common.exception.ProductCodeMismatchException;
 import com.example.inventory.management.inventory.common.exception.ProductNotFoundException;
+import com.example.inventory.management.inventory.common.exception.SqlStates;
+import com.example.inventory.management.inventory.common.exception.StockQuantityOverflowException;
 import com.example.inventory.management.inventory.product.Product;
 import com.example.inventory.management.inventory.product.ProductRepository;
 import com.example.inventory.management.inventory.stock.dto.InboundRequest;
@@ -9,8 +12,11 @@ import com.example.inventory.management.inventory.stock.dto.OutboundRequest;
 import com.example.inventory.management.inventory.stock.dto.StockChangeResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.function.Supplier;
 
 /**
  * Holds the actual stock-mutating transactions, kept in a separate bean (rather than as
@@ -49,7 +55,13 @@ class StockMutationExecutor {
                         log.error("입고 실패 - 존재하지 않는 productId={}", request.productId());
                         return new ProductNotFoundException(request.productId());
                     });
-            afterQuantity = productRepository.increaseQuantity(product.getId(), request.quantity())
+            if (request.productCode() != null && !request.productCode().equals(product.getProductCode())) {
+                log.error("입고 실패 - productId와 productCode 불일치: productId={}, 상품코드={}, 요청코드={}",
+                        product.getId(), product.getProductCode(), request.productCode());
+                throw new ProductCodeMismatchException(product.getId(), request.productCode());
+            }
+            afterQuantity = translateOverflow("productId=" + product.getId(),
+                    () -> productRepository.increaseQuantity(product.getId(), request.quantity()))
                     .orElseThrow(() -> {
                         log.error("입고 실패 - 수량 증가 쿼리 대상 없음: productId={}", product.getId());
                         return new ProductNotFoundException(product.getId());
@@ -60,8 +72,9 @@ class StockMutationExecutor {
             log.debug("기존 상품 입고: productId={}, beforeQuantity={}, afterQuantity={}",
                     productId, beforeQuantity, afterQuantity);
         } else {
-            ProductRepository.UpsertResult result = productRepository.upsertProductStock(
-                    request.productCode(), request.productName(), request.quantity());
+            ProductRepository.UpsertResult result = translateOverflow("productCode=" + request.productCode(),
+                    () -> productRepository.upsertProductStock(
+                            request.productCode(), request.productName(), request.quantity()));
             productId = result.getId();
             afterQuantity = result.getQuantity();
             beforeQuantity = Boolean.TRUE.equals(result.getInserted()) ? 0L : afterQuantity - request.quantity();
@@ -80,6 +93,23 @@ class StockMutationExecutor {
 
         return new StockChangeResponse(productId, productCode, StockType.INBOUND, request.quantity(),
                 beforeQuantity, afterQuantity, request.requestId(), history.getCreatedAt());
+    }
+
+    /**
+     * The only way a positive, limit-checked increment can fail with 22003 is the stored total
+     * exceeding BIGINT — a business conflict (409), not an internal error, and it must not be
+     * mistaken for a request_id collision by StockService.applyOrRecover.
+     */
+    private <T> T translateOverflow(String target, Supplier<T> increment) {
+        try {
+            return increment.get();
+        } catch (DataIntegrityViolationException e) {
+            if (SqlStates.is(e, SqlStates.NUMERIC_VALUE_OUT_OF_RANGE)) {
+                log.error("입고 실패 - 재고 수량 BIGINT 범위 초과: {}", target);
+                throw new StockQuantityOverflowException(target);
+            }
+            throw e;
+        }
     }
 
     @Transactional
