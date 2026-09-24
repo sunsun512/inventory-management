@@ -21,6 +21,8 @@ spring:
     deserialization:
       # 재고 수량은 정수만 허용한다. 기본값(true)이면 1.9가 1로 잘려 조용히 처리되므로 끈다.
       accept-float-as-int: false
+      # 요청 DTO에 없는 필드(오타, 출고의 productName 등)는 무시하지 않고 400으로 거부한다.
+      fail-on-unknown-properties: true
 
   data:
     web:
