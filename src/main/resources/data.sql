@@ -9,11 +9,24 @@
 --     product.quantity는 마지막 이력의 after_quantity와 같다.
 --   * 이력은 created_at 순서로 INSERT하므로 상품별 id 순서 = 실제 반영 순서(V3 인덱스 전제).
 --
--- Flyway 마이그레이션이 아니다. `seed` 프로필에서 LocalSeedDataRunner가 product / stock_history가
--- 모두 비어 있을 때만 하나의 트랜잭션으로 실행한다(기존 데이터는 지우지 않는다).
+-- Flyway 마이그레이션이 아니다. Spring Boot SQL 초기화(spring.sql.init)가 Flyway 마이그레이션 뒤에
+-- 애플리케이션 기동마다 실행한다. local 프로필만 켜져 있고(mode: always, DB_SEED_MODE=never로 끔),
+-- 공통 설정은 기본값(embedded)이라 Postgres를 쓰는 테스트·다른 환경에서는 실행되지 않는다.
+--   * product / stock_history가 모두 비어 있을 때만 데이터를 넣는다. 데이터가 있으면 아무것도 지우거나
+--     추가하지 않으므로 다시 기동해도 안전하다.
+--   * spring.sql.init은 문장마다 자동 커밋하므로 스크립트 전체를 BEGIN/COMMIT으로 감싸 하나의 트랜잭션으로
+--     실행한다(SET LOCAL, ON COMMIT DROP 임시 테이블, 검증 실패 시 전체 롤백이 이 전제에 의존한다).
+--   * DO $$ 블록 안의 ;에서 문장이 잘리지 않도록 spring.sql.init.separator를 스크립트 끝 구분자로 두어
+--     파일 전체를 한 번에 PgJDBC로 보낸다.
+
+BEGIN;
 
 -- 시드 생성·검증은 약 20초 걸려 공통 statement_timeout(기본 5s)을 넘으므로 이 트랜잭션에서만 해제한다.
 SET LOCAL statement_timeout = 0;
+
+-- 0) 두 테이블이 모두 비어 있을 때만 시드한다. 아니면 1)의 상품 원본이 0건이 되어 이후 단계가 모두 비게 된다.
+CREATE TEMP TABLE seed_guard ON COMMIT DROP AS
+SELECT NOT EXISTS (SELECT 1 FROM product) AND NOT EXISTS (SELECT 1 FROM stock_history) AS should_seed;
 
 -- 같은 결과를 다시 얻을 수 있도록 난수 시드를 고정한다. 다른 데이터가 필요하면 값을 바꾼다.
 SELECT setseed(0.20260924);
@@ -45,7 +58,8 @@ SELECT
     now() - interval '180 days' + random() * interval '140 days' AS registered_at    -- 180~40일 전
 FROM generate_series(1, 10000) AS g
 JOIN category c ON c.ci = g % 8
-CROSS JOIN option_word o;
+CROSS JOIN option_word o
+WHERE (SELECT should_seed FROM seed_guard);
 
 -- 2) 이력 체인: 재귀 CTE로 모든 상품의 n번째 요청을 한 단계씩 동시에 만든다.
 --    재고가 0이면 반드시 입고, 그 외에는 입고 55% / 출고 45%.
@@ -139,6 +153,11 @@ DECLARE
     v_bad_order    bigint;
     v_bad_first    bigint;
 BEGIN
+    IF NOT (SELECT should_seed FROM seed_guard) THEN
+        RAISE NOTICE 'seed 건너뜀: 기존 상품/재고 이력 데이터가 있음';
+        RETURN;
+    END IF;
+
     SELECT count(*) INTO v_products FROM product;
     SELECT count(*) INTO v_histories FROM stock_history;
 
@@ -185,3 +204,5 @@ END $$;
 
 ANALYZE product;
 ANALYZE stock_history;
+
+COMMIT;

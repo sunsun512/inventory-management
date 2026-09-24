@@ -13,6 +13,13 @@ spring:
       idle-timeout: 300000
       leak-detection-threshold: 10000
 
+  sql:
+    init:
+      # 기동 시 data.sql(로컬 시드 데이터)을 Flyway 마이그레이션 뒤에 실행한다. 테이블이 비어 있을 때만 넣는다.
+      # 끄려면 DB_SEED_MODE=never. (spring.jpa.defer-datasource-initialization은 Flyway와 순환 의존이 생겨 쓰지 않는다.)
+      mode: ${DB_SEED_MODE:always}
+      # data.sql의 DO $$ ... $$ 블록 안 ;에서 문장이 잘리지 않도록 파일 전체를 한 문장으로 실행한다.
+      separator: ^^^ END OF SCRIPT ^^^
 
   jpa:
     hibernate:
