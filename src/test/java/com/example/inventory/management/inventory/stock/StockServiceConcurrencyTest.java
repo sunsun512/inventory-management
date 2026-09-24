@@ -164,6 +164,90 @@ class StockServiceConcurrencyTest extends AbstractIntegrationTest {
         log.info("동일 신규 상품코드 동시 등록 {}라운드 결과: {}", ROUNDS, total);
     }
 
+    @Test
+    void 입고와_출고를_동시에_섞어_처리해도_최종_재고와_모든_이력이_정합하다() throws InterruptedException {
+        int pairs = 10;
+        long initial = 5_000L;
+        Seeded seeded = seedProduct(initial);
+        long inboundSum = IntStream.range(0, pairs).mapToLong(i -> 100L + i).sum();
+        long outboundSum = IntStream.range(0, pairs).mapToLong(i -> 50L + i).sum();
+
+        List<String> results = runConcurrently(pairs * 2, i -> {
+            int n = i / 2;
+            return i % 2 == 0
+                    ? outcome(() -> stockService.inbound(
+                            new InboundRequest(seeded.id(), seeded.code(), null, 100L + n, newRequestId())))
+                    : outcome(() -> stockService.outbound(
+                            new OutboundRequest(seeded.id(), seeded.code(), 50L + n, newRequestId())));
+        });
+
+        assertThat(countOf(results, SUCCESS)).as("results: %s", tally(results)).isEqualTo(pairs * 2);
+        assertThat(quantityOf(seeded.id())).isEqualTo(initial + inboundSum - outboundSum);
+        List<StockHistory> histories = stockHistoryRepository.findByProductId(seeded.id(), Pageable.unpaged()).getContent();
+        assertThat(histories).hasSize(1 + pairs * 2); // seed + every request, no duplicates
+        assertHistoryArithmetic(histories);
+        log.info("입출고 혼합 동시 처리 정합성 확인: productId={}, finalQuantity={}", seeded.id(), quantityOf(seeded.id()));
+    }
+
+    @Test
+    void 기존_상품에_서로_다른_requestId로_동시_입고하면_수량이_모두_합산된다() throws InterruptedException {
+        int threads = 10;
+        long initial = 10L;
+        long each = 7L;
+        Seeded seeded = seedProduct(initial);
+
+        List<String> results = runConcurrently(threads,
+                i -> outcome(() -> stockService.inbound(
+                        new InboundRequest(seeded.id(), seeded.code(), null, each, newRequestId()))));
+
+        assertThat(countOf(results, SUCCESS)).as("results: %s", tally(results)).isEqualTo(threads);
+        assertThat(quantityOf(seeded.id())).isEqualTo(initial + threads * each);
+        List<StockHistory> histories = stockHistoryRepository.findByProductId(seeded.id(), Pageable.unpaged()).getContent();
+        assertThat(histories).hasSize(1 + threads);
+        assertHistoryArithmetic(histories);
+        // Row-locked updates are serialized, so no two inbounds may observe the same before/after.
+        assertThat(histories.stream().map(StockHistory::getAfterQuantity).distinct().count()).isEqualTo(1 + threads);
+        log.info("서로 다른 requestId 동시 입고 합산 확인: productId={}, finalQuantity={}", seeded.id(), quantityOf(seeded.id()));
+    }
+
+    @Test
+    void 같은_requestId로_입고와_출고를_동시에_보내면_한_건만_반영되고_나머지는_중복_요청으로_거절된다()
+            throws InterruptedException {
+        int threads = 6;
+        long initial = 100L;
+        Map<String, Long> total = new TreeMap<>();
+        for (int round = 0; round < ROUNDS; round++) {
+            Seeded seeded = seedProduct(initial);
+            String requestId = newRequestId();
+
+            List<String> results = runConcurrently(threads, i -> i % 2 == 0
+                    ? outcome(() -> stockService.inbound(new InboundRequest(seeded.id(), seeded.code(), null, 10L, requestId)))
+                    : outcome(() -> stockService.outbound(new OutboundRequest(seeded.id(), seeded.code(), 10L, requestId))));
+
+            assertThat(countOf(results, SUCCESS)).as("round %d: %s", round, results).isEqualTo(1);
+            assertThat(countOf(results, "DUPLICATE_REQUEST")).as("round %d: %s", round, results).isEqualTo(threads - 1);
+            String winnerType = jdbcTemplate.queryForObject(
+                    "SELECT type FROM stock_history WHERE request_id = ?", String.class, requestId);
+            long expected = StockType.INBOUND.name().equals(winnerType) ? initial + 10L : initial - 10L;
+            assertThat(quantityOf(seeded.id())).as("round %d: winner=%s", round, winnerType).isEqualTo(expected);
+            assertThat(historyCount(seeded.id())).isEqualTo(2); // seed + exactly one change
+            assertThat(requestIdRowCount(requestId)).isEqualTo(1);
+            accumulate(total, results);
+        }
+        log.info("동일 requestId 입고/출고 동시 요청 {}라운드 결과: {}", ROUNDS, total);
+    }
+
+    private static void assertHistoryArithmetic(List<StockHistory> histories) {
+        for (StockHistory h : histories) {
+            long expectedAfter = h.getType() == StockType.INBOUND
+                    ? h.getBeforeQuantity() + h.getQuantity()
+                    : h.getBeforeQuantity() - h.getQuantity();
+            assertThat(h.getAfterQuantity())
+                    .as("history %d (%s): before=%d, qty=%d", h.getId(), h.getType(), h.getBeforeQuantity(), h.getQuantity())
+                    .isEqualTo(expectedAfter);
+        }
+    }
+
     private void assertSameKeyOutboundAppliedOnce(long initialQuantity, long quantity) throws InterruptedException {
         Map<String, Long> total = new TreeMap<>();
         for (int round = 0; round < ROUNDS; round++) {
