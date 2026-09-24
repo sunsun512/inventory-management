@@ -1,7 +1,7 @@
 package com.example.inventory.management.common.exception;
 
 import com.example.inventory.management.common.response.ErrorResponse;
-import com.example.inventory.management.stock.validation.QuantityLimit;
+import com.example.inventory.management.stock.command.validation.QuantityLimit;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
