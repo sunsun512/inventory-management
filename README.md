@@ -81,6 +81,20 @@ open build/reports/jacoco/test/html/index.html   # macOS에서 HTML 리포트 �
 
 # 설계
 
+## 패키지 구조
+기능(도메인) 단위로 패키지를 나눕니다. 기준 패키지는 `com.example.inventory.management`입니다.
+```
+com.example.inventory.management
+├── common/     여러 기능이 함께 쓰는 코드
+│   ├── config/      Jackson, OpenAPI, QueryDSL 설정
+│   ├── exception/   ErrorCode, 비즈니스 예외, 전역 예외 핸들러
+│   └── response/    공통 응답(ErrorResponse, PageResponse)
+├── product/    상품 목록·상세·현재 재고 조회 (dto/)
+└── stock/      입고·출고 처리, 재고 변경 이력 (dto/, validation/)
+```
+- 각 기능 패키지에는 Controller, Service, Repository, 엔티티를 함께 둡니다. 요청·응답 객체는 `dto/`에 둡니다.
+- 테스트는 같은 패키지 구조를 따릅니다. 통합 테스트 기반 클래스와 픽스처는 `support/`에 있습니다.
+
 ## 요청 검증
 - `quantity`는 1 ~ 10,000 사이 정수만 허용합니다. 소수·문자열 숫자는 400, 10,000 초과는 409 `QUANTITY_LIMIT_EXCEEDED`입니다.
 - `productCode`는 정규화하지 않고 `^[A-Z0-9]+$` 형식만 허용합니다.
