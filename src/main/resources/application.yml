@@ -3,17 +3,7 @@ spring:
     name: inventory-management
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
     hikari:
-      pool-name: hikari-rw-pool
-      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
-      minimum-idle: ${DB_POOL_MIN_IDLE:4}
-      connection-timeout: 5000
-      validation-timeout: 2000
-      max-lifetime: 600000
-      idle-timeout: 300000
       data-source-properties:
         # 세션 단위 Postgres 타임아웃. 상품 행 락을 오래 기다리거나(lock_timeout, SQLState 55P03)
         # 쿼리가 오래 걸리면(statement_timeout, 57014) 커넥션을 무한정 붙잡지 않고 실패시킨다.
@@ -21,8 +11,6 @@ spring:
         options: -c lock_timeout=${DB_LOCK_TIMEOUT:3s} -c statement_timeout=${DB_STATEMENT_TIMEOUT:5s}
 
   jpa:
-    hibernate:
-      ddl-auto: validate
     open-in-view: false
     properties:
       hibernate:
