@@ -40,7 +40,7 @@ docker run -d --name inventory-postgres \
 
 ## 애플리케이션 실행
 ```bash
-./gradlew bootRun
+./gradlew bootRun --args='--spring.profiles.active=local'
 ```
 `application.yml`의 `spring.datasource.*`는 환경변수 `DB_URL` / `DB_USERNAME` / `DB_PASSWORD`로 덮어쓸 수 있습니다 (기본값은 위 로컬 Postgres 설정과 일치). 애플리케이션 기동 시 Flyway가 `src/main/resources/db/migration`의 마이그레이션을 자동 적용합니다.
 
