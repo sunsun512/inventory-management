@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "stock_history")
@@ -46,13 +47,23 @@ public class StockHistory {
 
     public StockHistory(Long productId, StockType type, Long quantity, Long beforeQuantity,
                          Long afterQuantity, String requestId) {
+        this(productId, type, quantity, beforeQuantity, afterQuantity, requestId,
+                Instant.now().truncatedTo(ChronoUnit.MICROS));
+    }
+
+    /**
+     * @param createdAt the mutation's timestamp, shared with the product's updated_at so the history
+     *                  row and the product change it records carry the same instant
+     */
+    public StockHistory(Long productId, StockType type, Long quantity, Long beforeQuantity,
+                         Long afterQuantity, String requestId, Instant createdAt) {
         this.productId = productId;
         this.type = type;
         this.quantity = quantity;
         this.beforeQuantity = beforeQuantity;
         this.afterQuantity = afterQuantity;
         this.requestId = requestId;
-        this.createdAt = Instant.now();
+        this.createdAt = createdAt;
     }
 
     public Long getId() {

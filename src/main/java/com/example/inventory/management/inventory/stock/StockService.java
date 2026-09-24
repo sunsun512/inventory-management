@@ -3,6 +3,7 @@ package com.example.inventory.management.inventory.stock;
 import com.example.inventory.management.inventory.common.exception.DuplicateRequestException;
 import com.example.inventory.management.inventory.common.exception.ProductCodeAlreadyExistsException;
 import com.example.inventory.management.inventory.common.exception.SqlStates;
+import com.example.inventory.management.inventory.common.response.PageResponse;
 import com.example.inventory.management.inventory.product.ProductService;
 import com.example.inventory.management.inventory.stock.dto.InboundRequest;
 import com.example.inventory.management.inventory.stock.dto.OutboundRequest;
@@ -11,8 +12,6 @@ import com.example.inventory.management.inventory.stock.dto.StockHistoryResponse
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,13 +32,16 @@ public class StockService {
     static final String PRODUCT_CODE_UNIQUE_CONSTRAINT = "uk_product_product_code";
 
     private final StockHistoryRepository stockHistoryRepository;
+    private final StockHistoryQueryRepository stockHistoryQueryRepository;
     private final ProductService productService;
     private final StockMutationExecutor mutationExecutor;
 
     public StockService(StockHistoryRepository stockHistoryRepository,
+                         StockHistoryQueryRepository stockHistoryQueryRepository,
                          ProductService productService,
                          StockMutationExecutor mutationExecutor) {
         this.stockHistoryRepository = stockHistoryRepository;
+        this.stockHistoryQueryRepository = stockHistoryQueryRepository;
         this.productService = productService;
         this.mutationExecutor = mutationExecutor;
     }
@@ -58,11 +60,16 @@ public class StockService {
                 () -> mutationExecutor.applyOutbound(request));
     }
 
+    /**
+     * A page of the product's histories in the fixed order {@code createdAt DESC, id DESC}.
+     * {@code size} above {@link PageResponse#MAX_SIZE} is clamped to it.
+     */
     @Transactional(readOnly = true)
-    public Page<StockHistoryResponse> getHistory(Long productId, Pageable pageable) {
-        log.debug("재고 이력 조회: productId={}, page={}, size={}", productId, pageable.getPageNumber(), pageable.getPageSize());
+    public PageResponse<StockHistoryResponse> getHistory(Long productId, int page, int size) {
+        int pageSize = Math.min(size, PageResponse.MAX_SIZE);
+        log.debug("재고 이력 조회: productId={}, page={}, size={}", productId, page, pageSize);
         productService.getOrThrow(productId);
-        return stockHistoryRepository.findByProductId(productId, pageable).map(StockHistoryResponse::from);
+        return stockHistoryQueryRepository.findByProductId(productId, page, pageSize).map(StockHistoryResponse::from);
     }
 
     /**
@@ -71,7 +78,6 @@ public class StockService {
      */
     private void rejectIfAlreadyProcessed(String requestId) {
         if (stockHistoryRepository.existsByRequestId(requestId)) {
-            log.error("중복 요청 거절 - 이미 처리된 requestId: requestId={}", requestId);
             throw new DuplicateRequestException(requestId);
         }
     }
@@ -79,7 +85,8 @@ public class StockService {
     /**
      * Safety net: the requestId lock + in-transaction check and ON CONFLICT DO NOTHING normally
      * prevent these unique violations, but if one still fires it is the same conflict and maps to
-     * the same 409. Any other integrity failure is rethrown untouched.
+     * the same 409. Any other integrity failure is rethrown untouched. Failures are not logged here:
+     * GlobalExceptionHandler logs each failed request exactly once.
      */
     private StockChangeResponse translateUniqueViolation(String requestId, String productCode,
                                                          Supplier<StockChangeResponse> mutation) {
@@ -87,16 +94,11 @@ public class StockService {
             return mutation.get();
         } catch (DataIntegrityViolationException e) {
             if (SqlStates.isUniqueViolationOf(e, REQUEST_ID_UNIQUE_CONSTRAINT)) {
-                log.error("requestId 유니크 제약 충돌 - 중복 요청으로 거절합니다: requestId={}", requestId);
                 throw new DuplicateRequestException(requestId);
             }
             if (SqlStates.isUniqueViolationOf(e, PRODUCT_CODE_UNIQUE_CONSTRAINT)) {
-                log.error("상품코드 유니크 제약 충돌 - 상품코드 중복으로 거절합니다: productCode={}, requestId={}",
-                        productCode, requestId);
                 throw new ProductCodeAlreadyExistsException(productCode);
             }
-            log.error("재고 변경 중 데이터 무결성 위반 발생: requestId={}, sqlState={}",
-                    requestId, SqlStates.of(e).orElse("unknown"));
             throw e;
         }
     }

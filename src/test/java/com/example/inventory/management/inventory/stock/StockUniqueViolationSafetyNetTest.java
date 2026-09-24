@@ -20,6 +20,7 @@ import static com.example.inventory.management.inventory.support.ProductFixtures
 import static com.example.inventory.management.inventory.support.ProductFixtures.uniqueCode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -77,7 +78,7 @@ class StockUniqueViolationSafetyNetTest extends AbstractIntegrationTest {
             jdbcTemplate.update("INSERT INTO product (product_code, name, quantity) VALUES (?, '선점', 0)", code);
             jdbcTemplate.update("INSERT INTO product (product_code, name, quantity) VALUES (?, '중복', 0)", code);
             return Optional.empty();
-        }).when(productRepository).insertProductIfAbsent(eq(code), anyString(), anyLong());
+        }).when(productRepository).insertProductIfAbsent(eq(code), anyString(), anyLong(), any());
 
         assertThatThrownBy(() -> stockService.inbound(new InboundRequest(null, code, "상품", 1L, newRequestId())))
                 .isInstanceOf(InventoryException.class)

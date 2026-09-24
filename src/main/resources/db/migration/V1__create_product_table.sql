@@ -8,5 +8,3 @@ CREATE TABLE product (
     CONSTRAINT uk_product_product_code UNIQUE (product_code),
     CONSTRAINT ck_product_quantity_non_negative CHECK (quantity >= 0)
 );
-
-CREATE INDEX idx_product_name ON product (name);

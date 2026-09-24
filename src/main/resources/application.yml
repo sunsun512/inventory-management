@@ -24,12 +24,6 @@ spring:
       # 요청 DTO에 없는 필드(오타, 출고의 productName 등)는 무시하지 않고 400으로 거부한다.
       fail-on-unknown-properties: true
 
-  data:
-    web:
-      pageable:
-        # 페이지 크기 상한. 더 큰 size를 요청하면 오류 없이 100으로 제한된다.
-        max-page-size: 100
-
   flyway:
     enabled: true
     locations: classpath:db/migration
