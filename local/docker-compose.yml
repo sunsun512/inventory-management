@@ -1,6 +1,6 @@
 services:
   postgres:
-    container_name: postgres
+    container_name: postgresql
     image: postgres:17.5
     environment:
       POSTGRES_DB: inventory
