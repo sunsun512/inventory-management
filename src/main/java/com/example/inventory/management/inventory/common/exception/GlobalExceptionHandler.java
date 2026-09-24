@@ -9,7 +9,6 @@ import org.springframework.beans.TypeMismatchException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.dao.QueryTimeoutException;
-import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -25,6 +24,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import tools.jackson.databind.exc.UnrecognizedPropertyException;
 
@@ -44,7 +44,8 @@ import java.util.Optional;
  *       {@code UNSUPPORTED_MEDIA_TYPE}</li>
  *   <li>406 {@link HttpMediaTypeNotAcceptableException} → no body (the client accepts no type we can write)</li>
  * </ul>
- * 4xx client errors are logged at WARN, 5xx at ERROR.
+ * 4xx client errors are logged at WARN, 5xx at ERROR. This handler is the only place a failed
+ * request is logged: services throw without logging, so each failure produces exactly one log line.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -150,6 +151,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         if (ex instanceof TypeMismatchException typeMismatch) {
             return typeMismatch.getPropertyName() + ": 요청 값의 타입이 올바르지 않습니다.";
         }
+        if (ex instanceof HandlerMethodValidationException methodValidation) {
+            return firstParameterViolation(methodValidation).orElse("요청 값이 유효하지 않습니다.");
+        }
         if (ex instanceof MissingServletRequestParameterException missing) {
             return missing.getParameterName() + ": 필수 요청 파라미터가 없습니다.";
         }
@@ -166,16 +170,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         };
     }
 
-    /**
-     * An unknown property in a Pageable/Sort parameter surfaces from Spring Data as
-     * PropertyReferenceException; it is a client error, not a server failure.
-     */
-    @ExceptionHandler(PropertyReferenceException.class)
-    public ResponseEntity<ErrorResponse> handlePropertyReference(PropertyReferenceException ex) {
-        log.warn("존재하지 않는 속성 참조: property={}", ex.getPropertyName());
-        return ResponseEntity.status(ErrorCode.VALIDATION_FAILED.getStatus())
-                .body(ErrorResponse.of(ErrorCode.VALIDATION_FAILED.name(),
-                        "존재하지 않는 속성입니다: " + ex.getPropertyName()));
+    /** A constraint on a request parameter (e.g. {@code @Min} on {@code page}) as {@code "name: message"}. */
+    private static Optional<String> firstParameterViolation(HandlerMethodValidationException ex) {
+        return ex.getParameterValidationResults().stream()
+                .filter(result -> !result.getResolvableErrors().isEmpty())
+                .findFirst()
+                .map(result -> result.getMethodParameter().getParameterName() + ": "
+                        + result.getResolvableErrors().get(0).getDefaultMessage());
     }
 
     @ExceptionHandler(InventoryException.class)
@@ -210,7 +211,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-        log.error("데이터 무결성 위반 발생", ex);
+        log.error("데이터 무결성 위반 발생: sqlState={}", SqlStates.of(ex).orElse("unknown"), ex);
         return ResponseEntity.status(ErrorCode.INTERNAL_ERROR.getStatus())
                 .body(ErrorResponse.of(ErrorCode.INTERNAL_ERROR.name(), "데이터 처리 중 오류가 발생했습니다."));
     }

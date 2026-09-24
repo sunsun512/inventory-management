@@ -7,6 +7,8 @@ application configuration (`application*.yml`) that change how the application b
 
 It does not apply to changes that do not touch code behavior, such as:
 - documentation (README, CLAUDE.md, code comments, Swagger/OpenAPI description text)
+- Swagger/OpenAPI documentation (annotations such as `@Operation`/`@Parameter`/`@Schema`, `OpenApiConfig`) —
+  no tests are written for API docs
 - `.claude` rules and other tooling/editor settings
 - analysis, investigation, or proposals without code changes
 - git operations (branching, committing, pushing, pull requests)
