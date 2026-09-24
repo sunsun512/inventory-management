@@ -4,9 +4,19 @@ spring:
     username: inventory-user
     password: inventory-password
     hikari:
+      pool-name: hikari-rw-pool
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:4}
+      connection-timeout: 5000
+      validation-timeout: 2000
+      max-lifetime: 600000
+      idle-timeout: 300000
       leak-detection-threshold: 10000
 
+
   jpa:
+    hibernate:
+      ddl-auto: validate
     properties:
       hibernate:
         format_sql: true

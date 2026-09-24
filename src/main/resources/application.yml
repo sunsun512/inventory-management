@@ -2,28 +2,12 @@ spring:
   application:
     name: inventory-management
 
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    hikari:
-      pool-name: hikari-rw-pool
-      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
-      minimum-idle: ${DB_POOL_MIN_IDLE:4}
-      connection-timeout: 5000
-      validation-timeout: 2000
-      max-lifetime: 600000
-      idle-timeout: 300000
-
   jpa:
-    hibernate:
-      ddl-auto: validate
     open-in-view: false
     properties:
       hibernate:
         jdbc:
           time_zone: UTC
-
   flyway:
     enabled: true
     locations: classpath:db/migration
