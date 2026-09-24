@@ -1,7 +1,7 @@
 package com.example.inventory.management.common.exception;
 
-import com.example.inventory.management.product.ProductRepository;
-import com.example.inventory.management.stock.StockHistoryRepository;
+import com.example.inventory.management.product.domain.ProductRepository;
+import com.example.inventory.management.stock.domain.StockHistoryRepository;
 import com.example.inventory.management.support.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
