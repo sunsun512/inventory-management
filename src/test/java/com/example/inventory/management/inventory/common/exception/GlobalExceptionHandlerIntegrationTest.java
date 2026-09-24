@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Pins how Spring MVC framework exceptions (unreadable body, type mismatch, unknown path, wrong
- * method, unsupported/unacceptable media type, bad sort property) are mapped: each keeps its
+ * method, unsupported/unacceptable media type) are mapped: each keeps its
  * proper 4xx status and the project's ErrorResponse body instead of falling into the catch-all 500.
  * Not @Transactional so every request goes through the real dispatch/exception-resolution path.
  */
@@ -123,31 +123,6 @@ class GlobalExceptionHandlerIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
         log.warn("예상된 400 응답 확인: productId=abc");
-    }
-
-    @Test
-    void 존재하지_않는_정렬_속성은_400_VALIDATION_FAILED를_반환한다() throws Exception {
-        mockMvc.perform(get("/api/v1/products/{id}/stock-histories", productId).param("sort", "nope"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
-        log.warn("예상된 400 응답 확인: sort=nope");
-    }
-
-    @Test
-    void 허용되지_않은_정렬_속성은_400_VALIDATION_FAILED를_반환한다() throws Exception {
-        mockMvc.perform(get("/api/v1/products/{id}/stock-histories", productId).param("sort", "quantity"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
-        log.warn("예상된 400 응답 확인: sort=quantity");
-    }
-
-    @Test
-    void 허용된_정렬_속성은_200을_반환한다() throws Exception {
-        mockMvc.perform(get("/api/v1/products/{id}/stock-histories", productId).param("sort", "id,desc"))
-                .andExpect(status().isOk());
-        mockMvc.perform(get("/api/v1/products/{id}/stock-histories", productId).param("sort", "createdAt,asc"))
-                .andExpect(status().isOk());
-        log.info("허용된 정렬 속성 정상 응답 확인: productId={}", productId);
     }
 
     @Test

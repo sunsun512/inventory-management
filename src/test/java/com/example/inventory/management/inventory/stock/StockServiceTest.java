@@ -5,11 +5,13 @@ import com.example.inventory.management.inventory.common.exception.InsufficientS
 import com.example.inventory.management.inventory.common.exception.InventoryException;
 import com.example.inventory.management.inventory.common.exception.ProductCodeMismatchException;
 import com.example.inventory.management.inventory.common.exception.ProductNotFoundException;
+import com.example.inventory.management.inventory.common.response.PageResponse;
 import com.example.inventory.management.inventory.product.Product;
 import com.example.inventory.management.inventory.product.ProductRepository;
 import com.example.inventory.management.inventory.stock.dto.InboundRequest;
 import com.example.inventory.management.inventory.stock.dto.OutboundRequest;
 import com.example.inventory.management.inventory.stock.dto.StockChangeResponse;
+import com.example.inventory.management.inventory.stock.dto.StockHistoryResponse;
 import com.example.inventory.management.inventory.support.AbstractIntegrationTest;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -17,7 +19,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -105,8 +106,8 @@ class StockServiceTest extends AbstractIntegrationTest {
         Product product = productRepository.findById(productId).orElseThrow();
         assertThat(product.getQuantity()).isEqualTo(10L);
         assertThat(product.getName()).isEqualTo("기존 상품");
-        assertThat(stockHistoryRepository.findByProductId(productId, Pageable.unpaged())
-                .getTotalElements()).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM stock_history WHERE product_id = ?", Long.class, productId)).isZero();
     }
 
     @Test
@@ -216,5 +217,42 @@ class StockServiceTest extends AbstractIntegrationTest {
                 new InboundRequest(999_999L, "SKUANY", null, 5L, newRequestId())))
                 .isInstanceOf(ProductNotFoundException.class);
         log.error("예상된 ProductNotFoundException 발생 확인: productId=999999");
+    }
+
+    @Test
+    void 재고_이력_조회는_최신순_페이지와_다음_페이지_여부를_반환한다() {
+        Long productId = insertProduct(jdbcTemplate, "SKUHIST", "이력 상품", 0L);
+        String first = newRequestId();
+        String second = newRequestId();
+        String third = newRequestId();
+        stockService.inbound(new InboundRequest(productId, "SKUHIST", null, 1L, first));
+        stockService.inbound(new InboundRequest(productId, "SKUHIST", null, 2L, second));
+        stockService.inbound(new InboundRequest(productId, "SKUHIST", null, 3L, third));
+
+        PageResponse<StockHistoryResponse> page = stockService.getHistory(productId, 0, 2);
+
+        assertThat(page.content()).extracting(StockHistoryResponse::requestId).containsExactly(third, second);
+        assertThat(page.page()).isZero();
+        assertThat(page.size()).isEqualTo(2);
+        assertThat(page.hasNext()).isTrue();
+        log.info("재고 이력 조회 결과 확인: productId={}", productId);
+    }
+
+    @Test
+    void 재고_이력_조회_페이지_크기는_최대_100으로_제한된다() {
+        Long productId = insertProduct(jdbcTemplate, "SKUHISTMAX", "이력 상품", 0L);
+
+        PageResponse<StockHistoryResponse> page = stockService.getHistory(productId, 0, 1000);
+
+        assertThat(page.size()).isEqualTo(100);
+        assertThat(page.content()).isEmpty();
+        assertThat(page.hasNext()).isFalse();
+    }
+
+    @Test
+    void 존재하지_않는_상품의_재고_이력을_조회하면_상품없음_예외가_발생한다() {
+        assertThatThrownBy(() -> stockService.getHistory(999_999L, 0, 10))
+                .isInstanceOf(ProductNotFoundException.class);
+        log.error("예상된 ProductNotFoundException 발생 확인 - 이력 조회: productId=999999");
     }
 }

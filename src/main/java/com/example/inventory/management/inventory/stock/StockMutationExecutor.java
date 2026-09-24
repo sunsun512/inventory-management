@@ -18,6 +18,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.function.Supplier;
 
 /**
@@ -30,6 +32,13 @@ import java.util.function.Supplier;
  * Concurrent requests with the same key therefore run one after another, and every one after the
  * first successful commit is rejected with DUPLICATE_REQUEST before any business check. Lock order
  * is always advisory lock → product row, so the two locks cannot deadlock.
+ *
+ * <p>Each mutation reads the application clock once ({@link #now()}) and uses that value for the
+ * product's updated_at (and created_at for a new product), the history's created_at and the
+ * response, so all of them agree exactly.
+ *
+ * <p>Business failures are thrown, not logged, here: GlobalExceptionHandler logs each failed
+ * request exactly once, so the exception message carries the context needed to diagnose it.
  */
 @Component
 class StockMutationExecutor {
@@ -49,6 +58,7 @@ class StockMutationExecutor {
         log.debug("입고 처리 시작: productId={}, productCode={}, quantity={}, requestId={}",
                 request.productId(), request.productCode(), request.quantity(), request.requestId());
         claimRequestId(request.requestId());
+        Instant now = now();
 
         Long productId;
         String productCode;
@@ -56,13 +66,10 @@ class StockMutationExecutor {
         Long afterQuantity;
 
         if (request.productId() != null) {
-            Product product = findMatchingProduct(request.productId(), request.productCode(), "입고");
+            Product product = findMatchingProduct(request.productId(), request.productCode());
             afterQuantity = translateOverflow("productId=" + product.getId(),
-                    () -> productRepository.increaseQuantity(product.getId(), request.quantity()))
-                    .orElseThrow(() -> {
-                        log.error("입고 실패 - 수량 증가 쿼리 대상 없음: productId={}", product.getId());
-                        return new ProductNotFoundException(product.getId());
-                    });
+                    () -> productRepository.increaseQuantity(product.getId(), request.quantity(), now))
+                    .orElseThrow(() -> new ProductNotFoundException(product.getId()));
             beforeQuantity = afterQuantity - request.quantity();
             productId = product.getId();
             productCode = product.getProductCode();
@@ -70,11 +77,8 @@ class StockMutationExecutor {
                     productId, beforeQuantity, afterQuantity);
         } else {
             ProductRepository.InsertedProduct inserted = productRepository
-                    .insertProductIfAbsent(request.productCode(), request.productName(), request.quantity())
-                    .orElseThrow(() -> {
-                        log.error("입고 실패 - 이미 등록된 상품코드로 신규 등록 시도: productCode={}", request.productCode());
-                        return new ProductCodeAlreadyExistsException(request.productCode());
-                    });
+                    .insertProductIfAbsent(request.productCode(), request.productName(), request.quantity(), now)
+                    .orElseThrow(() -> new ProductCodeAlreadyExistsException(request.productCode()));
             productId = inserted.getId();
             afterQuantity = inserted.getQuantity();
             beforeQuantity = 0L;
@@ -84,7 +88,7 @@ class StockMutationExecutor {
         }
 
         StockHistory history = new StockHistory(
-                productId, StockType.INBOUND, request.quantity(), beforeQuantity, afterQuantity, request.requestId());
+                productId, StockType.INBOUND, request.quantity(), beforeQuantity, afterQuantity, request.requestId(), now);
         stockHistoryRepository.save(history);
         log.debug("입고 이력 저장 완료: historyId={}, requestId={}", history.getId(), request.requestId());
 
@@ -101,19 +105,18 @@ class StockMutationExecutor {
                 request.productId(), request.productCode(), request.quantity(), request.requestId());
         claimRequestId(request.requestId());
 
-        Product product = findMatchingProduct(request.productId(), request.productCode(), "출고");
+        Product product = findMatchingProduct(request.productId(), request.productCode());
+        Instant now = now();
 
-        Long afterQuantity = productRepository.decreaseQuantityIfSufficient(product.getId(), request.quantity())
-                .orElseThrow(() -> {
-                    log.error("출고 실패 - 재고 부족: productId={}, 요청수량={}", product.getId(), request.quantity());
-                    return new InsufficientStockException(product.getId());
-                });
+        Long afterQuantity = productRepository.decreaseQuantityIfSufficient(product.getId(), request.quantity(), now)
+                .orElseThrow(() -> new InsufficientStockException(product.getId(), request.quantity()));
         Long beforeQuantity = afterQuantity + request.quantity();
         log.debug("출고 수량 차감 완료: productId={}, beforeQuantity={}, afterQuantity={}",
                 product.getId(), beforeQuantity, afterQuantity);
 
         StockHistory history = new StockHistory(
-                product.getId(), StockType.OUTBOUND, request.quantity(), beforeQuantity, afterQuantity, request.requestId());
+                product.getId(), StockType.OUTBOUND, request.quantity(), beforeQuantity, afterQuantity, request.requestId(),
+                now);
         stockHistoryRepository.save(history);
         log.debug("출고 이력 저장 완료: historyId={}, requestId={}", history.getId(), request.requestId());
 
@@ -125,6 +128,14 @@ class StockMutationExecutor {
     }
 
     /**
+     * Truncated to microseconds, the precision of Postgres TIMESTAMPTZ, so the value returned in the
+     * response is exactly the value stored.
+     */
+    private static Instant now() {
+        return Instant.now().truncatedTo(ChronoUnit.MICROS);
+    }
+
+    /**
      * Takes the requestId advisory lock, then re-checks for a committed request with the same key.
      * The check runs after the lock is granted, so under READ COMMITTED it sees a history row
      * committed by the previous holder of the lock.
@@ -132,22 +143,16 @@ class StockMutationExecutor {
     private void claimRequestId(String requestId) {
         stockHistoryRepository.acquireRequestIdLock(requestId);
         if (stockHistoryRepository.existsByRequestId(requestId)) {
-            log.error("재고 변경 거절 - 이미 처리된 requestId: requestId={}", requestId);
             throw new DuplicateRequestException(requestId);
         }
         log.debug("requestId 선점 완료: requestId={}", requestId);
     }
 
     /** 404 if the product doesn't exist, 400 if productCode is not exactly that product's code. */
-    private Product findMatchingProduct(Long productId, String productCode, String operation) {
+    private Product findMatchingProduct(Long productId, String productCode) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> {
-                    log.error("{} 실패 - 존재하지 않는 productId={}", operation, productId);
-                    return new ProductNotFoundException(productId);
-                });
+                .orElseThrow(() -> new ProductNotFoundException(productId));
         if (!product.getProductCode().equals(productCode)) {
-            log.error("{} 실패 - productId와 productCode 불일치: productId={}, 상품코드={}, 요청코드={}",
-                    operation, product.getId(), product.getProductCode(), productCode);
             throw new ProductCodeMismatchException(product.getId(), productCode);
         }
         return product;
@@ -162,7 +167,6 @@ class StockMutationExecutor {
             return increment.get();
         } catch (DataIntegrityViolationException e) {
             if (SqlStates.is(e, SqlStates.NUMERIC_VALUE_OUT_OF_RANGE)) {
-                log.error("입고 실패 - 재고 수량 BIGINT 범위 초과: {}", target);
                 throw new StockQuantityOverflowException(target);
             }
             throw e;

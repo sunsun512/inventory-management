@@ -26,6 +26,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-flyway'
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1'
+    // QueryDSL (OpenFeign fork: Jakarta Persistence / Hibernate 7 호환). Q클래스는 빌드 시
+    // build/generated/sources/annotationProcessor 아래에 생성되며 git에 포함하지 않는다.
+    implementation 'io.github.openfeign.querydsl:querydsl-jpa:7.7'
+    annotationProcessor 'io.github.openfeign.querydsl:querydsl-apt:7.7:jpa'
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
     runtimeOnly 'org.postgresql:postgresql'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'

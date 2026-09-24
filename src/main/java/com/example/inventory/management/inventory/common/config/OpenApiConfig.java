@@ -15,7 +15,16 @@ import org.springframework.context.annotation.Configuration;
 public class OpenApiConfig {
 
     private static final String DESCRIPTION = """
-            상품 **입고·출고**와 **현재 재고·재고 변경 이력 조회** API입니다.
+            상품 **입고·출고**와 **상품 목록·상세, 현재 재고·재고 변경 이력 조회** API입니다.
+
+            | API | 설명 |
+            |:---|:---|
+            | `POST /api/v1/stocks/inbound` | 입고 (미등록 상품은 신규 등록 후 입고) |
+            | `POST /api/v1/stocks/outbound` | 출고 |
+            | `GET /api/v1/products` | 상품 목록 (`productCode` 정확 일치 필터로 코드 → `productId` 조회 가능) |
+            | `GET /api/v1/products/{productId}` | 상품 상세 |
+            | `GET /api/v1/products/{productId}/stock` | 현재 재고 |
+            | `GET /api/v1/products/{productId}/stock-histories` | 재고 변경 이력 |
 
             ---
 
@@ -28,6 +37,7 @@ public class OpenApiConfig {
             | `quantity` | 정수 `1` ~ `10,000` | `1.9`, `2.0` 같은 소수는 잘라내지 않고 거부 |
             | `productId` | 정수 | 서버가 발급한 상품 ID |
 
+            - 상품 목록 조회의 `productCode` 쿼리 파라미터도 같은 형식 규칙을 따릅니다.
             - 정수 필드에 문자열(`"5"`)을 보내거나 정의되지 않은 필드가 있으면 거부합니다.
             - 위반 시 `400 VALIDATION_FAILED`입니다. 단, `quantity`가 10,000을 넘기만 한 경우는 `409 QUANTITY_LIMIT_EXCEEDED`입니다 (다른 오류와 겹치면 400 우선).
 
@@ -52,14 +62,14 @@ public class OpenApiConfig {
             ```json
             {
               "code": "INSUFFICIENT_STOCK",
-              "message": "재고가 부족합니다. productId=1",
+              "message": "재고가 부족합니다. productId=1, requestedQuantity=5",
               "timestamp": "2026-09-23T14:37:42.931304Z"
             }
             ```
 
             | HTTP | code | 상황 |
             |:---:|:---|:---|
-            | 400 | `VALIDATION_FAILED` | 요청 값 오류 — 필수값 누락, 형식 오류, JSON 오류, 본문 누락, 경로 변수 타입 오류, 허용되지 않은 `sort` 등 |
+            | 400 | `VALIDATION_FAILED` | 요청 값 오류 — 필수값 누락, 형식 오류, JSON 오류, 본문 누락, 경로 변수 타입 오류, 범위를 벗어난 `page`·`size` 등 |
             | 400 | `PRODUCT_CODE_MISMATCH` | `productCode`가 `productId` 상품의 코드와 다름 |
             | 404 | `PRODUCT_NOT_FOUND` | 상품 없음 |
             | 404 | `NOT_FOUND` | 존재하지 않는 API 경로 |
