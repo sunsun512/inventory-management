@@ -4,16 +4,14 @@ import com.example.inventory.management.common.exception.ProductNotFoundExceptio
 import com.example.inventory.management.common.response.PageResponse;
 import com.example.inventory.management.product.domain.ProductRepository;
 import com.example.inventory.management.stock.query.dto.StockHistoryResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
+@Slf4j
 public class StockHistoryQueryService {
-
-    private static final Logger log = LoggerFactory.getLogger(StockHistoryQueryService.class);
 
     private final StockHistoryQueryRepository stockHistoryQueryRepository;
     private final ProductRepository productRepository;

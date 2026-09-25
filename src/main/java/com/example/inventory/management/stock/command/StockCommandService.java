@@ -7,8 +7,7 @@ import com.example.inventory.management.stock.command.dto.InboundRequest;
 import com.example.inventory.management.stock.command.dto.OutboundRequest;
 import com.example.inventory.management.stock.command.dto.StockChangeResponse;
 import com.example.inventory.management.stock.domain.StockHistoryRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -21,9 +20,8 @@ import java.util.function.Supplier;
  * so a request that failed (400/404/409/503) leaves its requestId free for a retry.
  */
 @Service
+@Slf4j
 public class StockCommandService {
-
-    private static final Logger log = LoggerFactory.getLogger(StockCommandService.class);
 
     static final String REQUEST_ID_UNIQUE_CONSTRAINT = "uk_stock_history_request_id";
     static final String PRODUCT_CODE_UNIQUE_CONSTRAINT = "uk_product_product_code";
