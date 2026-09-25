@@ -1,15 +1,15 @@
 {
   "schema_version": 2,
-  "generated_at": "2026-09-25T13:57:03+09:00",
+  "generated_at": "2026-09-25T14:03:18+09:00",
   "repo": {
     "name": "inventroy-management",
     "path": ".",
-    "commit": "2a6a1fa",
-    "branch": "feature/IM5-readme-cleanup",
-    "files_scanned": 105
+    "commit": "014e9cc",
+    "branch": "feature/IM8-review-agent",
+    "files_scanned": 109
   },
-  "total": 76,
-  "auto_total": 76,
+  "total": 79,
+  "auto_total": 79,
   "max": 100,
   "grade": {
     "level": "AI-Ready",
@@ -17,7 +17,7 @@
     "min_score": 75
   },
   "overrides_applied": false,
-  "summary": "CLAUDE.md → __workspace 패키지 문서로 이어지는 2-hop navigation이 모든 핵심 module을 덮고, 각 문서가 소유 범위·수정 패턴·실패 함정·의존성·배경을 코드 근거와 함께 답해 탐색성과 암묵지 항목이 만점이다. 문서 속 참조 87건이 모두 실존하고 표본 검증한 서술도 코드와 일치한다. 남은 약점은 자동화다: context 검증 CI·스케줄, 아키텍처 테스트, 독립 리뷰, eval 세트, 성과 측정이 없다.",
+  "summary": "CLAUDE.md → __workspace 패키지 문서로 이어지는 2-hop navigation과 코드 근거가 있는 패키지 문서로 탐색성·문서 품질·암묵지가 만점이고, IM8에서 3-round 리뷰 체계(작성자 자가 점검 → 독립 컨텍스트의 code-reviewer 에이전트 → CODEOWNERS 사람 리뷰)와 PR 템플릿이 추가되어 독립 리뷰(E2)도 만점이다. 남은 약점은 자동화다: context 경로 검증 CI·스케줄, 아키텍처 테스트, eval 세트, 성과 측정이 없다.",
   "categories": [
     {
       "id": "A",
@@ -59,7 +59,7 @@
           "auto_score": 4,
           "rationale": "primary context 파일 1개 가중 평균 4.0/4",
           "evidence": [
-            "CLAUDE.md: 비어있지 않은 줄 32, 추정 1023 tokens"
+            "CLAUDE.md: 비어있지 않은 줄 33, 추정 1101 tokens"
           ],
           "gaps": [],
           "id": "B1",
@@ -115,7 +115,7 @@
           "auto_score": 4,
           "rationale": "primary context 파일 1개 가중 평균 4.0/4",
           "evidence": [
-            "CLAUDE.md: 상호 참조 8건"
+            "CLAUDE.md: 상호 참조 11건"
           ],
           "gaps": [],
           "id": "B5",
@@ -143,7 +143,7 @@
             "common: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0",
             "stock: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0",
             "product: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0",
-            "전역 지식 소스 10개: ['.claude/rules/db-migration.md', '.claude/rules/git-branch.md', '.claude/rules/package-docs.md', '.claude/rules/tdd.md', 'CLAUDE.md', 'README.md', '__workspace/README.md', '__workspace/common.md']",
+            "전역 지식 소스 13개: ['.claude/agents/code-reviewer.md', '.claude/rules/db-migration.md', '.claude/rules/git-branch.md', '.claude/rules/package-docs.md', '.claude/rules/review-before-pr.md', '.claude/rules/tdd.md', 'CLAUDE.md', 'README.md']",
             "ADR/decision 문서 0개, 코드 내 TODO/FIXME/HACK/XXX 주석 0개"
           ],
           "gaps": [],
@@ -170,7 +170,7 @@
           "rationale": "diagram·architecture 문서·dependency note(+5) / 전용 dependency·data-flow 섹션(+3) / ownership(+2) / machine-readable graph(+5)",
           "evidence": [
             "본문 dependency note 6건: CLAUDE.md: …n/` (entities, repositories). Dependency direction is `api → command / query → domain`; `command` and `query` never reference | README.md: - 의존 방향: `api → command / query → domain`. `command`와 `query`는 서로 참조하지 않습니다. | __workspace/product.md: …ON CONFLICT (product_code) DO NOTHING` → 빈 결과. 호출자가 409로 바꿉니다.",
-            "dependency/data-flow 섹션: ['__workspace/common.md', '__workspace/product.md', '__workspace/stock.md']",
+            "dependency/data-flow 섹션: ['.claude/rules/review-before-pr.md', '__workspace/common.md', '__workspace/product.md', '__workspace/stock.md']",
             "ownership: ['.github/CODEOWNERS']"
           ],
           "gaps": [
@@ -198,14 +198,14 @@
       "name_ko": "검증 & 품질 게이트",
       "max": 15,
       "level": "하위 항목 합산",
-      "score": 8,
-      "auto_score": 8,
+      "score": 11,
+      "auto_score": 11,
       "items": [
         {
           "auto_score": 5,
-          "rationale": "참조 87건 중 깨진 참조 0건 (0%)",
+          "rationale": "참조 100건 중 깨진 참조 0건 (0%)",
           "evidence": [
-            "검증한 참조 87건 모두 실존"
+            "검증한 참조 100건 모두 실존"
           ],
           "gaps": [],
           "id": "E1",
@@ -216,27 +216,24 @@
           "override_reason": null
         },
         {
-          "auto_score": 1,
+          "auto_score": 4,
           "rationale": "PR 템플릿(+1) / CODEOWNERS(+1) / 리뷰 체크리스트·에이전트·자동 리뷰(+2)",
           "evidence": [
-            "PR 템플릿: []",
+            "PR 템플릿: ['.github/pull_request_template.md']",
             "CODEOWNERS: .github/CODEOWNERS",
-            "리뷰 설정: []"
+            "리뷰 설정: ['.claude/agents/code-reviewer.md', 'docs/review-checklist.md']"
           ],
-          "gaps": [
-            "PR 템플릿(체크리스트) 없음",
-            "독립 리뷰 체크리스트/리뷰 에이전트/자동 리뷰 없음"
-          ],
+          "gaps": [],
           "signals": {
-            "pr_template": false,
+            "pr_template": true,
             "codeowners": true,
-            "review": false
+            "review": true
           },
           "id": "E2",
           "category": "E",
           "name": "E2. 독립 리뷰 (Critic Review)",
           "max": 4,
-          "score": 1,
+          "score": 4,
           "override_reason": null
         },
         {
@@ -361,11 +358,11 @@
         "__workspace/common.md"
       ],
       "mentioned_in": [
+        ".claude/agents/code-reviewer.md",
         ".claude/rules/package-docs.md",
         "CLAUDE.md",
         "README.md",
-        "__workspace/README.md",
-        "__workspace/product.md"
+        "__workspace/README.md"
       ]
     },
     {
@@ -380,11 +377,11 @@
         "__workspace/stock.md"
       ],
       "mentioned_in": [
+        ".claude/agents/code-reviewer.md",
         ".claude/rules/package-docs.md",
         "CLAUDE.md",
         "README.md",
-        "__workspace/README.md",
-        "__workspace/common.md"
+        "__workspace/README.md"
       ]
     },
     {
@@ -399,11 +396,11 @@
         "__workspace/product.md"
       ],
       "mentioned_in": [
+        ".claude/agents/code-reviewer.md",
         ".claude/rules/package-docs.md",
         "CLAUDE.md",
         "README.md",
-        "__workspace/README.md",
-        "__workspace/common.md"
+        "__workspace/README.md"
       ]
     }
   ],
@@ -445,26 +442,31 @@
   ],
   "context_files": {
     "ai_context": [
+      ".claude/agents/code-reviewer.md",
       ".claude/rules/db-migration.md",
       ".claude/rules/git-branch.md",
       ".claude/rules/package-docs.md",
+      ".claude/rules/review-before-pr.md",
       ".claude/rules/tdd.md",
       "CLAUDE.md",
       "README.md",
       "__workspace/README.md",
       "__workspace/common.md",
       "__workspace/product.md",
-      "__workspace/stock.md"
+      "__workspace/stock.md",
+      "docs/review-checklist.md"
     ],
     "primary": [
       "CLAUDE.md"
     ],
     "linked": {
+      ".claude/agents/code-reviewer.md": "CLAUDE.md → .claude/agents/code-reviewer.md",
       "README.md": "CLAUDE.md → README.md",
       "__workspace/README.md": "CLAUDE.md → __workspace/README.md",
       "__workspace/common.md": "CLAUDE.md → __workspace/README.md → __workspace/common.md",
       "__workspace/product.md": "CLAUDE.md → __workspace/README.md → __workspace/product.md",
-      "__workspace/stock.md": "CLAUDE.md → __workspace/README.md → __workspace/stock.md"
+      "__workspace/stock.md": "CLAUDE.md → __workspace/README.md → __workspace/stock.md",
+      "docs/review-checklist.md": "CLAUDE.md → docs/review-checklist.md"
     }
   },
   "actions": [
@@ -502,17 +504,6 @@
       "rank": 3
     },
     {
-      "item": "E2",
-      "title": "독립 리뷰 체크리스트/리뷰 에이전트 추가",
-      "detail": ".claude/agents/reviewer.md 또는 자동 리뷰로 2차 검토",
-      "targets": [],
-      "effort": "S",
-      "expected_gain": 2,
-      "source": "auto",
-      "roi": 2.0,
-      "rank": 4
-    },
-    {
       "item": "E4",
       "title": "대표 AI task eval 세트 만들기",
       "detail": "자주 하는 작업 5-10개를 프롬프트 + 기대 결과(수정 파일, 통과 테스트)로 저장",
@@ -521,18 +512,7 @@
       "expected_gain": 2,
       "source": "auto",
       "roi": 1.0,
-      "rank": 5
-    },
-    {
-      "item": "E2",
-      "title": "PR 템플릿에 AI 변경 검증 체크리스트 추가",
-      "detail": "참조 경로 확인, 테스트 결과 첨부, context 문서 갱신 여부 체크",
-      "targets": [],
-      "effort": "S",
-      "expected_gain": 1,
-      "source": "auto",
-      "roi": 1.0,
-      "rank": 6
+      "rank": 4
     },
     {
       "item": "E3",
@@ -547,7 +527,7 @@
       "expected_gain": 1,
       "source": "auto",
       "roi": 1.0,
-      "rank": 7
+      "rank": 5
     },
     {
       "item": "E3",
@@ -558,7 +538,7 @@
       "expected_gain": 1,
       "source": "auto",
       "roi": 0.5,
-      "rank": 8
+      "rank": 6
     }
   ],
   "verification": [
@@ -596,14 +576,48 @@
       "claim": "ddl-auto: validate 적용 범위",
       "result": "불일치 → 수정",
       "evidence": "application-local.yml:25에만 존재. CLAUDE.md를 'local 프로필에서만'으로 정정"
+    },
+    {
+      "claim": "체크리스트: 새 비즈니스 오류는 ErrorCode + InventoryException 하위 클래스",
+      "result": "일치",
+      "evidence": "common/exception의 7개 예외가 InventoryException(ErrorCode, message) 상속"
+    },
+    {
+      "claim": "체크리스트: rate limit 버킷 만료 ≥ capacity ÷ refill-per-second",
+      "result": "일치",
+      "evidence": "커밋 0717d80, PostRateLimiter.java:51-60"
+    },
+    {
+      "claim": "code-reviewer 에이전트 정의로 실제 리뷰 가능 (스모크 테스트)",
+      "result": "일치",
+      "evidence": "커밋 0717d80 리뷰: file:line 근거 2건, 체크리스트 항목별 판정, PostRateLimiterTest 7건 통과. 피드백 4건을 정의·체크리스트에 반영"
     }
   ],
-  "provenance": {
+  "previous": {
+    "file": "develop-76.json",
+    "total": 76,
+    "generated_at": "2026-09-25T13:57:03+09:00",
+    "commit": "2a6a1fa",
+    "branch": "feature/IM5-readme-cleanup",
     "script_version": "1.3.0",
-    "script_sha": "b31c74679ba1",
+    "grade": "AI-Ready",
+    "categories": {
+      "A": 15,
+      "B": 20,
+      "C": 20,
+      "D": 10,
+      "E": 8,
+      "F": 3,
+      "G": 0
+    },
+    "label": "develop (014e9cc)"
+  },
+  "provenance": {
+    "script_version": "1.3.1",
+    "script_sha": "07c4c2a03a34",
     "rubric_sha": "70cc8b7ed437",
     "overrides_file": "docs/ai-ready/overrides.json",
-    "overrides_sha": "238cb295ecf9",
-    "command": "python3 score.py . --out docs/ai-ready --overrides docs/ai-ready/overrides.json"
+    "overrides_sha": "a5bd5e4fd927",
+    "command": "python3 score.py . --out docs/ai-ready --overrides docs/ai-ready/overrides.json --previous develop-76.json --previous-label develop (014e9cc)"
   }
 }
