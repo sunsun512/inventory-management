@@ -39,6 +39,11 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    postgresql:
+      # 마이그레이션 잠금을 트랜잭션(pg_advisory_xact_lock) 대신 세션 단위(pg_advisory_lock)로 잡는다.
+      # 트랜잭션 잠금은 실행 내내 트랜잭션을 열어 두어 CREATE/DROP INDEX CONCURRENTLY가 그 종료를 기다리며 막힌다.
+      # 동시 실행 차단은 그대로이고, 각 마이그레이션의 트랜잭션 실행 여부에는 영향이 없다.
+      transactional-lock: false
 
 management:
   endpoints:
