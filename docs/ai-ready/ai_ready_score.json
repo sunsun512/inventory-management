@@ -1,10 +1,10 @@
 {
   "schema_version": 2,
-  "generated_at": "2026-09-25T14:03:18+09:00",
+  "generated_at": "2026-09-25T14:11:23+09:00",
   "repo": {
     "name": "inventroy-management",
     "path": ".",
-    "commit": "014e9cc",
+    "commit": "ea6794e",
     "branch": "feature/IM8-review-agent",
     "files_scanned": 109
   },
@@ -591,33 +591,43 @@
       "claim": "code-reviewer 에이전트 정의로 실제 리뷰 가능 (스모크 테스트)",
       "result": "일치",
       "evidence": "커밋 0717d80 리뷰: file:line 근거 2건, 체크리스트 항목별 판정, PostRateLimiterTest 7건 통과. 피드백 4건을 정의·체크리스트에 반영"
+    },
+    {
+      "claim": "__workspace/common.md: rate limit 유효 범위 capacity ≥ 1, refill-per-second 1~10억",
+      "result": "일치",
+      "evidence": "PostRateLimiter Javadoc·timeToRefill(ea6794e), Bucket4j 8.20.0 실측(1e9 초과 IAE), PostRateLimiterTest 10건 통과"
+    },
+    {
+      "claim": "code-reviewer 에이전트 실사용 (PostRateLimiter 수정 PR 전 리뷰)",
+      "result": "일치",
+      "evidence": "산술 경계 증명·체크리스트 판정·rate limit 테스트 19건 실행, 사소 1건(multiplyExact) 반영 후 커밋"
     }
   ],
   "previous": {
-    "file": "develop-76.json",
-    "total": 76,
-    "generated_at": "2026-09-25T13:57:03+09:00",
-    "commit": "2a6a1fa",
-    "branch": "feature/IM5-readme-cleanup",
-    "script_version": "1.3.0",
+    "file": "im8-79.json",
+    "total": 79,
+    "generated_at": "2026-09-25T14:03:18+09:00",
+    "commit": "014e9cc",
+    "branch": "feature/IM8-review-agent",
+    "script_version": "1.3.1",
     "grade": "AI-Ready",
     "categories": {
       "A": 15,
       "B": 20,
       "C": 20,
       "D": 10,
-      "E": 8,
+      "E": 11,
       "F": 3,
       "G": 0
     },
-    "label": "develop (014e9cc)"
+    "label": "cd8b0b0"
   },
   "provenance": {
     "script_version": "1.3.1",
     "script_sha": "07c4c2a03a34",
     "rubric_sha": "70cc8b7ed437",
     "overrides_file": "docs/ai-ready/overrides.json",
-    "overrides_sha": "a5bd5e4fd927",
-    "command": "python3 score.py . --out docs/ai-ready --overrides docs/ai-ready/overrides.json --previous develop-76.json --previous-label develop (014e9cc)"
+    "overrides_sha": "2206865c824e",
+    "command": "python3 score.py . --out docs/ai-ready --overrides docs/ai-ready/overrides.json --previous im8-79.json --previous-label cd8b0b0"
   }
 }

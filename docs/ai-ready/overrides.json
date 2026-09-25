@@ -51,6 +51,16 @@
       "claim": "code-reviewer 에이전트 정의로 실제 리뷰 가능 (스모크 테스트)",
       "result": "일치",
       "evidence": "커밋 0717d80 리뷰: file:line 근거 2건, 체크리스트 항목별 판정, PostRateLimiterTest 7건 통과. 피드백 4건을 정의·체크리스트에 반영"
+    },
+    {
+      "claim": "__workspace/common.md: rate limit 유효 범위 capacity ≥ 1, refill-per-second 1~10억",
+      "result": "일치",
+      "evidence": "PostRateLimiter Javadoc·timeToRefill(ea6794e), Bucket4j 8.20.0 실측(1e9 초과 IAE), PostRateLimiterTest 10건 통과"
+    },
+    {
+      "claim": "code-reviewer 에이전트 실사용 (PostRateLimiter 수정 PR 전 리뷰)",
+      "result": "일치",
+      "evidence": "산술 경계 증명·체크리스트 판정·rate limit 테스트 19건 실행, 사소 1건(multiplyExact) 반영 후 커밋"
     }
   ]
 }
