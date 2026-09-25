@@ -42,6 +42,14 @@ docker compose -f local/docker-compose.yml up -d
 > docker compose -f local/docker-compose.yml down -v && docker compose -f local/docker-compose.yml up -d
 > ```
 
+### Docker 없이 직접 준비할 경우
+PostgreSQL(17 권장)에 superuser로 접속해 사용자와 DB를 만듭니다. 테이블은 앱 기동 시 Flyway가 생성합니다.
+```sql
+CREATE USER "inventory-user" WITH PASSWORD 'inventory-password';
+CREATE DATABASE inventory OWNER "inventory-user" ENCODING 'UTF8' TEMPLATE template0;
+```
+- 호스트·포트가 `localhost:5432`가 아니면 `application-local.yml`의 `spring.datasource.url`을 바꿉니다.
+
 ## 애플리케이션 실행
 ```bash
 ./gradlew bootRun --args='--spring.profiles.active=local'
