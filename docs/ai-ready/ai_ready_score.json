@@ -1,0 +1,609 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-09-25T13:57:03+09:00",
+  "repo": {
+    "name": "inventroy-management",
+    "path": ".",
+    "commit": "2a6a1fa",
+    "branch": "feature/IM5-readme-cleanup",
+    "files_scanned": 105
+  },
+  "total": 76,
+  "auto_total": 76,
+  "max": 100,
+  "grade": {
+    "level": "AI-Ready",
+    "meaning": "대부분의 개발 작업에서 AI가 안정적으로 navigation, edit, verify 가능",
+    "min_score": 75
+  },
+  "overrides_applied": false,
+  "summary": "CLAUDE.md → __workspace 패키지 문서로 이어지는 2-hop navigation이 모든 핵심 module을 덮고, 각 문서가 소유 범위·수정 패턴·실패 함정·의존성·배경을 코드 근거와 함께 답해 탐색성과 암묵지 항목이 만점이다. 문서 속 참조 87건이 모두 실존하고 표본 검증한 서술도 코드와 일치한다. 남은 약점은 자동화다: context 검증 CI·스케줄, 아키텍처 테스트, 독립 리뷰, eval 세트, 성과 측정이 없다.",
+  "categories": [
+    {
+      "id": "A",
+      "name": "AI Navigation & Coverage",
+      "name_ko": "AI 탐색성 & 커버리지",
+      "max": 15,
+      "level": "모든 핵심 module/workflow에 navigation guide, 1-2 hops 안에 찾음",
+      "score": 15,
+      "auto_score": 15,
+      "items": [
+        {
+          "auto_score": 15,
+          "rationale": "핵심 module 3개, Navigation Coverage 100% (내부 context·링크로 닿는 전용 문서=1.0, AI 문서 언급=0.6, README 언급=0.3)",
+          "evidence": [
+            "common: 전용 문서 __workspace/common.md (CLAUDE.md → __workspace/README.md → __workspace/common.md) (1.0)",
+            "stock: 전용 문서 __workspace/stock.md (CLAUDE.md → __workspace/README.md → __workspace/stock.md) (1.0)",
+            "product: 전용 문서 __workspace/product.md (CLAUDE.md → __workspace/README.md → __workspace/product.md) (1.0)"
+          ],
+          "gaps": [],
+          "id": "A",
+          "category": "A",
+          "name": "Navigation Coverage",
+          "max": 15,
+          "score": 15,
+          "override_reason": null
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "name": "Context Document Quality",
+      "name_ko": "컨텍스트 문서 품질",
+      "max": 20,
+      "level": "하위 항목 합산",
+      "score": 20,
+      "auto_score": 20,
+      "items": [
+        {
+          "auto_score": 4,
+          "rationale": "primary context 파일 1개 가중 평균 4.0/4",
+          "evidence": [
+            "CLAUDE.md: 비어있지 않은 줄 32, 추정 1023 tokens"
+          ],
+          "gaps": [],
+          "id": "B1",
+          "category": "B",
+          "name": "B1. 간결성 (Conciseness)",
+          "max": 4,
+          "score": 4,
+          "override_reason": null
+        },
+        {
+          "auto_score": 4,
+          "rationale": "primary context 파일 1개 가중 평균 4.0/4",
+          "evidence": [
+            "CLAUDE.md: 명령어 7개 (설명 붙은 것 7개)"
+          ],
+          "gaps": [],
+          "id": "B2",
+          "category": "B",
+          "name": "B2. 빠른 명령어 (Quick Commands)",
+          "max": 4,
+          "score": 4,
+          "override_reason": null
+        },
+        {
+          "auto_score": 4,
+          "rationale": "primary context 파일 1개 가중 평균 4.0/4",
+          "evidence": [
+            "CLAUDE.md: 실존 파일 참조 3개 (디렉터리·문서 제외) ['src/main/resources/data.sql', 'common/exception/ErrorCode', 'support/AbstractIntegrationTest']"
+          ],
+          "gaps": [],
+          "id": "B3",
+          "category": "B",
+          "name": "B3. 핵심 파일 (Key Files)",
+          "max": 4,
+          "score": 4,
+          "override_reason": null
+        },
+        {
+          "auto_score": 4,
+          "rationale": "primary context 파일 1개 가중 평균 4.0/4",
+          "evidence": [
+            "CLAUDE.md: 경고성 규칙 6줄"
+          ],
+          "gaps": [],
+          "id": "B4",
+          "category": "B",
+          "name": "B4. 비자명 패턴 (Non-Obvious Patterns)",
+          "max": 4,
+          "score": 4,
+          "override_reason": null
+        },
+        {
+          "auto_score": 4,
+          "rationale": "primary context 파일 1개 가중 평균 4.0/4",
+          "evidence": [
+            "CLAUDE.md: 상호 참조 8건"
+          ],
+          "gaps": [],
+          "id": "B5",
+          "category": "B",
+          "name": "B5. 상호 참조 (See Also)",
+          "max": 4,
+          "score": 4,
+          "override_reason": null
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "name": "Tribal Knowledge Externalization",
+      "name_ko": "암묵지 외재화",
+      "max": 20,
+      "level": "tribal knowledge 대부분이 context/checklist/playbook에 반영, 질의로 회수 가능",
+      "score": 20,
+      "auto_score": 20,
+      "items": [
+        {
+          "auto_score": 20,
+          "rationale": "module별 Five-Question 답변 가능 여부 (module 전용 문서=1.0, 전역 문서만=0.5)",
+          "evidence": [
+            "common: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0",
+            "stock: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0",
+            "product: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0",
+            "전역 지식 소스 10개: ['.claude/rules/db-migration.md', '.claude/rules/git-branch.md', '.claude/rules/package-docs.md', '.claude/rules/tdd.md', 'CLAUDE.md', 'README.md', '__workspace/README.md', '__workspace/common.md']",
+            "ADR/decision 문서 0개, 코드 내 TODO/FIXME/HACK/XXX 주석 0개"
+          ],
+          "gaps": [],
+          "id": "C",
+          "category": "C",
+          "name": "Five-Question Framework",
+          "max": 20,
+          "score": 20,
+          "override_reason": null
+        }
+      ]
+    },
+    {
+      "id": "D",
+      "name": "Cross-Module Dependency & Data Flow Mapping",
+      "name_ko": "모듈 간 의존성 & 데이터 흐름",
+      "max": 15,
+      "level": "주요 module 간 dependency와 ownership 문서화",
+      "score": 10,
+      "auto_score": 10,
+      "items": [
+        {
+          "auto_score": 10,
+          "rationale": "diagram·architecture 문서·dependency note(+5) / 전용 dependency·data-flow 섹션(+3) / ownership(+2) / machine-readable graph(+5)",
+          "evidence": [
+            "본문 dependency note 6건: CLAUDE.md: …n/` (entities, repositories). Dependency direction is `api → command / query → domain`; `command` and `query` never reference | README.md: - 의존 방향: `api → command / query → domain`. `command`와 `query`는 서로 참조하지 않습니다. | __workspace/product.md: …ON CONFLICT (product_code) DO NOTHING` → 빈 결과. 호출자가 409로 바꿉니다.",
+            "dependency/data-flow 섹션: ['__workspace/common.md', '__workspace/product.md', '__workspace/stock.md']",
+            "ownership: ['.github/CODEOWNERS']"
+          ],
+          "gaps": [
+            "dependency note만 있고 architecture 문서/다이어그램 없음",
+            "'What depends on X?'에 답할 machine-readable map/아키텍처 테스트 없음"
+          ],
+          "signals": {
+            "map_doc": true,
+            "section": true,
+            "ownership": true,
+            "graph": false
+          },
+          "id": "D",
+          "category": "D",
+          "name": "Dependency & Data Flow Map",
+          "max": 15,
+          "score": 10,
+          "override_reason": null
+        }
+      ]
+    },
+    {
+      "id": "E",
+      "name": "Verification & Quality Gates",
+      "name_ko": "검증 & 품질 게이트",
+      "max": 15,
+      "level": "하위 항목 합산",
+      "score": 8,
+      "auto_score": 8,
+      "items": [
+        {
+          "auto_score": 5,
+          "rationale": "참조 87건 중 깨진 참조 0건 (0%)",
+          "evidence": [
+            "검증한 참조 87건 모두 실존"
+          ],
+          "gaps": [],
+          "id": "E1",
+          "category": "E",
+          "name": "E1. 참조 정확성 (Reference Accuracy)",
+          "max": 5,
+          "score": 5,
+          "override_reason": null
+        },
+        {
+          "auto_score": 1,
+          "rationale": "PR 템플릿(+1) / CODEOWNERS(+1) / 리뷰 체크리스트·에이전트·자동 리뷰(+2)",
+          "evidence": [
+            "PR 템플릿: []",
+            "CODEOWNERS: .github/CODEOWNERS",
+            "리뷰 설정: []"
+          ],
+          "gaps": [
+            "PR 템플릿(체크리스트) 없음",
+            "독립 리뷰 체크리스트/리뷰 에이전트/자동 리뷰 없음"
+          ],
+          "signals": {
+            "pr_template": false,
+            "codeowners": true,
+            "review": false
+          },
+          "id": "E2",
+          "category": "E",
+          "name": "E2. 독립 리뷰 (Critic Review)",
+          "max": 4,
+          "score": 1,
+          "override_reason": null
+        },
+        {
+          "auto_score": 2,
+          "rationale": "context 문서의 검증 명령 종류(최대 3) + CI 테스트 실행(+1)",
+          "evidence": [
+            "context 문서의 검증 명령 종류: ['build', 'test']",
+            "CI 파일: 없음 (테스트 실행: False)"
+          ],
+          "gaps": [
+            "lint/format 명령 미기재",
+            "typecheck 명령 미기재",
+            "e2e 명령 미기재",
+            "CI에서 테스트 미실행"
+          ],
+          "signals": {
+            "kinds": [
+              "build",
+              "test"
+            ],
+            "ci_tests": false
+          },
+          "id": "E3",
+          "category": "E",
+          "name": "E3. 작업 검증 명령 (Task Validation)",
+          "max": 4,
+          "score": 2,
+          "override_reason": null
+        },
+        {
+          "auto_score": 0,
+          "rationale": "eval/golden task 파일(2) / 문서의 대표 task 예시만(1)",
+          "evidence": [
+            "eval 파일: 없음",
+            "문서 내 대표 task 예시: False"
+          ],
+          "gaps": [
+            "대표 AI task 질의 세트와 기대 결과가 없음"
+          ],
+          "id": "E4",
+          "category": "E",
+          "name": "E4. 프롬프트/워크플로 테스트",
+          "max": 2,
+          "score": 0,
+          "override_reason": null
+        }
+      ]
+    },
+    {
+      "id": "F",
+      "name": "Freshness & Self-Maintenance",
+      "name_ko": "최신성 & 자동 유지",
+      "max": 10,
+      "level": "문서 owner가 있고 가끔 업데이트",
+      "score": 3,
+      "auto_score": 3,
+      "items": [
+        {
+          "auto_score": 3,
+          "rationale": "최근 갱신만(2) / owner + 갱신(3) → CI·스크립트 경로 검증(6) → 스케줄 자동 검증(10) 중 최고 단계",
+          "evidence": [
+            "CODEOWNERS가 context/문서를 커버: True",
+            "context 파일 최근 갱신: CLAUDE.md=2026-09-25"
+          ],
+          "gaps": [
+            "context 경로/링크 검증 자동화 없음"
+          ],
+          "signals": {
+            "owner": true,
+            "validation": false,
+            "scheduled": false
+          },
+          "id": "F",
+          "category": "F",
+          "name": "Freshness Automation",
+          "max": 10,
+          "score": 3,
+          "override_reason": null
+        }
+      ]
+    },
+    {
+      "id": "G",
+      "name": "Agent Performance Outcomes",
+      "name_ko": "에이전트 성과 측정",
+      "max": 5,
+      "level": "AI 성능 개선 측정 없음",
+      "score": 0,
+      "auto_score": 0,
+      "items": [
+        {
+          "auto_score": 0,
+          "rationale": "정성 언급(2) / metric 측정(3) / 3종 이상 metric의 before-after 비교(5)",
+          "evidence": [
+            "metric 종류: []",
+            "before/after 문서: []",
+            "정성 언급 문서: []"
+          ],
+          "gaps": [
+            "AI task pass rate·tool calls·tokens 등의 before/after 측정 없음"
+          ],
+          "id": "G",
+          "category": "G",
+          "name": "Outcome Measurement",
+          "max": 5,
+          "score": 0,
+          "override_reason": null
+        }
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "path": "src/main/java/com/example/inventory/management/common",
+      "name": "common",
+      "code_files": 22,
+      "kind": "source-dir",
+      "label": "common",
+      "coverage_weight": 1.0,
+      "coverage_via": "전용 문서 __workspace/common.md (CLAUDE.md → __workspace/README.md → __workspace/common.md)",
+      "local_context": [
+        "__workspace/common.md"
+      ],
+      "mentioned_in": [
+        ".claude/rules/package-docs.md",
+        "CLAUDE.md",
+        "README.md",
+        "__workspace/README.md",
+        "__workspace/product.md"
+      ]
+    },
+    {
+      "path": "src/main/java/com/example/inventory/management/stock",
+      "name": "stock",
+      "code_files": 15,
+      "kind": "source-dir",
+      "label": "stock",
+      "coverage_weight": 1.0,
+      "coverage_via": "전용 문서 __workspace/stock.md (CLAUDE.md → __workspace/README.md → __workspace/stock.md)",
+      "local_context": [
+        "__workspace/stock.md"
+      ],
+      "mentioned_in": [
+        ".claude/rules/package-docs.md",
+        "CLAUDE.md",
+        "README.md",
+        "__workspace/README.md",
+        "__workspace/common.md"
+      ]
+    },
+    {
+      "path": "src/main/java/com/example/inventory/management/product",
+      "name": "product",
+      "code_files": 9,
+      "kind": "source-dir",
+      "label": "product",
+      "coverage_weight": 1.0,
+      "coverage_via": "전용 문서 __workspace/product.md (CLAUDE.md → __workspace/README.md → __workspace/product.md)",
+      "local_context": [
+        "__workspace/product.md"
+      ],
+      "mentioned_in": [
+        ".claude/rules/package-docs.md",
+        "CLAUDE.md",
+        "README.md",
+        "__workspace/README.md",
+        "__workspace/common.md"
+      ]
+    }
+  ],
+  "module_prefix": "src/main/java/com/example/inventory/management",
+  "five_questions": [
+    {
+      "module": "common",
+      "path": "src/main/java/com/example/inventory/management/common",
+      "answers": {
+        "q1_owns": 1.0,
+        "q2_modify": 1.0,
+        "q3_failures": 1.0,
+        "q4_deps": 1.0,
+        "q5_tribal": 1.0
+      }
+    },
+    {
+      "module": "stock",
+      "path": "src/main/java/com/example/inventory/management/stock",
+      "answers": {
+        "q1_owns": 1.0,
+        "q2_modify": 1.0,
+        "q3_failures": 1.0,
+        "q4_deps": 1.0,
+        "q5_tribal": 1.0
+      }
+    },
+    {
+      "module": "product",
+      "path": "src/main/java/com/example/inventory/management/product",
+      "answers": {
+        "q1_owns": 1.0,
+        "q2_modify": 1.0,
+        "q3_failures": 1.0,
+        "q4_deps": 1.0,
+        "q5_tribal": 1.0
+      }
+    }
+  ],
+  "context_files": {
+    "ai_context": [
+      ".claude/rules/db-migration.md",
+      ".claude/rules/git-branch.md",
+      ".claude/rules/package-docs.md",
+      ".claude/rules/tdd.md",
+      "CLAUDE.md",
+      "README.md",
+      "__workspace/README.md",
+      "__workspace/common.md",
+      "__workspace/product.md",
+      "__workspace/stock.md"
+    ],
+    "primary": [
+      "CLAUDE.md"
+    ],
+    "linked": {
+      "README.md": "CLAUDE.md → README.md",
+      "__workspace/README.md": "CLAUDE.md → __workspace/README.md",
+      "__workspace/common.md": "CLAUDE.md → __workspace/README.md → __workspace/common.md",
+      "__workspace/product.md": "CLAUDE.md → __workspace/README.md → __workspace/product.md",
+      "__workspace/stock.md": "CLAUDE.md → __workspace/README.md → __workspace/stock.md"
+    }
+  },
+  "actions": [
+    {
+      "item": "F",
+      "title": "context 경로·링크 검증을 CI + 주간 스케줄로 실행",
+      "detail": "context 문서의 파일 경로/명령 실재 여부를 PR마다 검사하고, 같은 검사를 cron으로 주 1회 실행",
+      "targets": [],
+      "effort": "M",
+      "expected_gain": 7,
+      "source": "auto",
+      "roi": 3.5,
+      "rank": 1
+    },
+    {
+      "item": "D",
+      "title": "의존 규칙을 아키텍처 테스트/map으로 고정",
+      "detail": "ArchUnit·dependency-cruiser·import-linter 등으로 허용 의존 방향을 테스트로 강제",
+      "targets": [],
+      "effort": "M",
+      "expected_gain": 5,
+      "source": "auto",
+      "roi": 2.5,
+      "rank": 2
+    },
+    {
+      "item": "G",
+      "title": "AI 작업 성과 지표 측정",
+      "detail": "eval 세트 기준 pass rate·tool calls·tokens·소요 시간을 context 개선 전후로 기록",
+      "targets": [],
+      "effort": "M",
+      "expected_gain": 5,
+      "source": "auto",
+      "roi": 2.5,
+      "rank": 3
+    },
+    {
+      "item": "E2",
+      "title": "독립 리뷰 체크리스트/리뷰 에이전트 추가",
+      "detail": ".claude/agents/reviewer.md 또는 자동 리뷰로 2차 검토",
+      "targets": [],
+      "effort": "S",
+      "expected_gain": 2,
+      "source": "auto",
+      "roi": 2.0,
+      "rank": 4
+    },
+    {
+      "item": "E4",
+      "title": "대표 AI task eval 세트 만들기",
+      "detail": "자주 하는 작업 5-10개를 프롬프트 + 기대 결과(수정 파일, 통과 테스트)로 저장",
+      "targets": [],
+      "effort": "M",
+      "expected_gain": 2,
+      "source": "auto",
+      "roi": 1.0,
+      "rank": 5
+    },
+    {
+      "item": "E2",
+      "title": "PR 템플릿에 AI 변경 검증 체크리스트 추가",
+      "detail": "참조 경로 확인, 테스트 결과 첨부, context 문서 갱신 여부 체크",
+      "targets": [],
+      "effort": "S",
+      "expected_gain": 1,
+      "source": "auto",
+      "roi": 1.0,
+      "rank": 6
+    },
+    {
+      "item": "E3",
+      "title": "변경 유형별 검증 명령 명시",
+      "detail": "context 문서에 빠진 종류의 검증 명령 추가",
+      "targets": [
+        "lint/format",
+        "typecheck",
+        "e2e"
+      ],
+      "effort": "S",
+      "expected_gain": 1,
+      "source": "auto",
+      "roi": 1.0,
+      "rank": 7
+    },
+    {
+      "item": "E3",
+      "title": "CI에서 테스트 실행",
+      "detail": "PR마다 테스트를 돌리는 CI 워크플로 추가",
+      "targets": [],
+      "effort": "M",
+      "expected_gain": 1,
+      "source": "auto",
+      "roi": 0.5,
+      "rank": 8
+    }
+  ],
+  "verification": [
+    {
+      "claim": "unique 위반은 제약 이름(uk_stock_history_request_id, uk_product_product_code)으로 판별",
+      "result": "일치",
+      "evidence": "V1:8, V2:10 제약 정의와 StockCommandService.java:26-27 상수"
+    },
+    {
+      "claim": "출고는 WHERE quantity >= :quantity 로 음수 방지",
+      "result": "일치",
+      "evidence": "ProductRepository.java:30"
+    },
+    {
+      "claim": "신규 상품 입고는 ON CONFLICT DO NOTHING (업서트 없음)",
+      "result": "일치",
+      "evidence": "ProductRepository.java:53"
+    },
+    {
+      "claim": "입고 BIGINT 초과는 translateOverflow로 409 변환",
+      "result": "일치",
+      "evidence": "StockMutationExecutor.java:71, 166"
+    },
+    {
+      "claim": "시각은 애플리케이션 시계를 마이크로초로 잘라 사용",
+      "result": "일치",
+      "evidence": "StockMutationExecutor.java:136 Instant.now().truncatedTo(MICROS)"
+    },
+    {
+      "claim": "stock.api는 stock 내부에서 command만 사용",
+      "result": "일치",
+      "evidence": "stock/api/*.java import: stock.command.*, common.response.ErrorResponse"
+    },
+    {
+      "claim": "ddl-auto: validate 적용 범위",
+      "result": "불일치 → 수정",
+      "evidence": "application-local.yml:25에만 존재. CLAUDE.md를 'local 프로필에서만'으로 정정"
+    }
+  ],
+  "provenance": {
+    "script_version": "1.3.0",
+    "script_sha": "b31c74679ba1",
+    "rubric_sha": "70cc8b7ed437",
+    "overrides_file": "docs/ai-ready/overrides.json",
+    "overrides_sha": "238cb295ecf9",
+    "command": "python3 score.py . --out docs/ai-ready --overrides docs/ai-ready/overrides.json"
+  }
+}

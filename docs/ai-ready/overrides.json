@@ -1,0 +1,13 @@
+{
+  "summary": "CLAUDE.md → __workspace 패키지 문서로 이어지는 2-hop navigation이 모든 핵심 module을 덮고, 각 문서가 소유 범위·수정 패턴·실패 함정·의존성·배경을 코드 근거와 함께 답해 탐색성과 암묵지 항목이 만점이다. 문서 속 참조 87건이 모두 실존하고 표본 검증한 서술도 코드와 일치한다. 남은 약점은 자동화다: context 검증 CI·스케줄, 아키텍처 테스트, 독립 리뷰, eval 세트, 성과 측정이 없다.",
+  "items": {},
+  "verification": [
+    {"claim": "unique 위반은 제약 이름(uk_stock_history_request_id, uk_product_product_code)으로 판별", "result": "일치", "evidence": "V1:8, V2:10 제약 정의와 StockCommandService.java:26-27 상수"},
+    {"claim": "출고는 WHERE quantity >= :quantity 로 음수 방지", "result": "일치", "evidence": "ProductRepository.java:30"},
+    {"claim": "신규 상품 입고는 ON CONFLICT DO NOTHING (업서트 없음)", "result": "일치", "evidence": "ProductRepository.java:53"},
+    {"claim": "입고 BIGINT 초과는 translateOverflow로 409 변환", "result": "일치", "evidence": "StockMutationExecutor.java:71, 166"},
+    {"claim": "시각은 애플리케이션 시계를 마이크로초로 잘라 사용", "result": "일치", "evidence": "StockMutationExecutor.java:136 Instant.now().truncatedTo(MICROS)"},
+    {"claim": "stock.api는 stock 내부에서 command만 사용", "result": "일치", "evidence": "stock/api/*.java import: stock.command.*, common.response.ErrorResponse"},
+    {"claim": "ddl-auto: validate 적용 범위", "result": "불일치 → 수정", "evidence": "application-local.yml:25에만 존재. CLAUDE.md를 'local 프로필에서만'으로 정정"}
+  ]
+}
