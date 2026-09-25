@@ -78,10 +78,14 @@ management:
           include: readinessState, db
 
 springdoc:
+  # 운영에서 API 명세 전체를 공개하지 않기 위해 /v3/api-docs와 Swagger UI는 끄고, local 프로필에서만 켠다.
+  api-docs:
+    enabled: false
   # 응답 미디어 타입을 */* 대신 application/json으로 표기한다.
   default-produces-media-type: application/json
   # @RestControllerAdvice의 핸들러를 모든 API의 공통 응답으로 자동 추가하지 않는다.
   # 에러 응답은 API마다 실제로 발생하는 것만 명시한다.
   override-with-generic-response: false
   swagger-ui:
+    enabled: false
     operations-sorter: method

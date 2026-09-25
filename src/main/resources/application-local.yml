@@ -33,6 +33,13 @@ management:
       # 로컬에서는 디버깅을 위해 DB 종류, 디스크 용량 등 상세 정보까지 보여준다.
       show-details: always
 
+springdoc:
+  # 로컬에서만 API 문서(/v3/api-docs)와 Swagger UI(/swagger-ui/index.html)를 제공한다.
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
 logging:
   level:
     com.example.inventory.management: DEBUG

@@ -44,7 +44,8 @@ interface StockApi {
             @ExampleObject(name = "신규 상품 등록 입고",
                     value = "{\"productCode\": \"SKU2\", \"productName\": \"상품 B\", \"quantity\": 10, \"requestId\": \"0b8e7d6c-5a4f-4e3d-8c2b-1a0f9e8d7c6b\"}")
     }))
-    @ApiResponse(responseCode = "200", description = "입고 완료")
+    @ApiResponse(responseCode = "200", description = "입고 완료",
+            headers = @Header(name = "X-RateLimit-Remaining", description = "남은 요청 수", schema = @Schema(type = "integer")))
     @ApiResponse(responseCode = "400", description = "`VALIDATION_FAILED` / `PRODUCT_CODE_MISMATCH`",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "404", description = "`PRODUCT_NOT_FOUND`",
@@ -69,7 +70,8 @@ interface StockApi {
                     - `productCode`가 상품과 일치하지 않으면 400 `PRODUCT_CODE_MISMATCH`, 상품이 없으면 404 `PRODUCT_NOT_FOUND`, \
                     재고가 부족하면 409 `INSUFFICIENT_STOCK`입니다.
                     """)
-    @ApiResponse(responseCode = "200", description = "출고 완료")
+    @ApiResponse(responseCode = "200", description = "출고 완료",
+            headers = @Header(name = "X-RateLimit-Remaining", description = "남은 요청 수", schema = @Schema(type = "integer")))
     @ApiResponse(responseCode = "400", description = "`VALIDATION_FAILED` / `PRODUCT_CODE_MISMATCH`",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "404", description = "`PRODUCT_NOT_FOUND`",

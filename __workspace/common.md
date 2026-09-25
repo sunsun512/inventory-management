@@ -2,18 +2,19 @@
 
 ## 소유 범위
 모든 기능이 공유하는 설정·예외·응답·횡단 관심사를 소유합니다. 사실상 `src/main/resources/application.yml`(공통)과 `application-local.yml`(local 프로필)의 동작도 여기서 다룹니다.
-- `config/` — `JacksonConfig`(엄격한 JSON), `QuerydslConfig`(`JPAQueryFactory`), `RateLimitConfig`(인터셉터 등록), `OpenApiConfig`(Swagger 공통 설명·에러 코드 표)
+- `config/` — `JacksonConfig`(엄격한 JSON), `QuerydslConfig`(`JPAQueryFactory`), `RateLimitConfig`(인터셉터 등록), `OpenApiConfig`(Swagger 공통 설명·에러 코드 표·공통 응답 헤더)
 - `exception/` — `ErrorCode`(코드 → HTTP 상태), `InventoryException`과 하위 예외들, `GlobalExceptionHandler`, `SqlStates`(SQLState 추출)
 - `logging/` — `ApiLoggingFilter`(`[REQ]`/`[RES]` 로그), `TraceIdResponseFilter`(`X-Trace-Id` 헤더)
 - `ratelimit/` — `PostRateLimiter`(IP별 토큰 버킷), `RateLimitInterceptor`, `RateLimitProperties`(`rate-limit.post.*`)
 - `response/` — `ErrorResponse`(`code`, `message`, `timestamp`), `PageResponse`(`content`, `page`, `size`, `hasNext`)
+- `validation/` — `@ProductCodeFormat`(`productCode` 형식: `^[A-Z0-9]+$`, 최대 64자; 입고·출고 요청과 상품 목록 필터가 공유)
 
 ## 핵심 파일
 - `src/main/java/com/example/inventory/management/common/exception/ErrorCode.java` — 에러 코드와 HTTP 상태
 - `src/main/java/com/example/inventory/management/common/exception/GlobalExceptionHandler.java` — 예외 → 응답·로그 매핑의 유일한 지점
 - `src/main/java/com/example/inventory/management/common/ratelimit/PostRateLimiter.java` — 버킷 생성·만료
-- `src/main/java/com/example/inventory/management/common/config/OpenApiConfig.java` — 공통 규칙·에러 코드 표(문서)
-- `src/main/resources/application.yml` — DB 타임아웃, graceful shutdown, Jackson, Flyway 잠금, rate limit, Actuator
+- `src/main/java/com/example/inventory/management/common/config/OpenApiConfig.java` — 공통 규칙·에러 코드 표·공통 응답 헤더(문서)
+- `src/main/resources/application.yml` — DB 타임아웃, graceful shutdown, Jackson, Flyway 잠금, rate limit, Actuator, springdoc(기본 비활성)
 
 ## 수정 패턴
 **새 에러 코드 추가**
@@ -43,11 +44,13 @@
 - **통합 테스트는 한도를 올려 둠**: `AbstractIntegrationTest`가 `rate-limit.post.capacity=1000000`을 설정합니다. 작은 한도 검증은 `RateLimitIntegrationTest`처럼 별도 `@SpringBootTest`로.
 - **`spring.flyway.postgresql.transactional-lock: false` 유지**: 트랜잭션 잠금이면 `CREATE/DROP INDEX CONCURRENTLY`가 그 트랜잭션 종료를 기다리며 막힙니다(`FlywayLockConfigTest`).
 - **`ddl-auto: validate`는 `application-local.yml`에만** 있습니다. 공통 `application.yml`에는 없습니다.
+- **Swagger(`/v3/api-docs`, `/swagger-ui/index.html`)는 `local` 프로필에서만 켬**: 공통 설정에서 `springdoc.api-docs.enabled`·`swagger-ui.enabled`가 `false`라 기본 프로필(통합 테스트 포함)에서는 404 `NOT_FOUND`입니다. 문서 응답을 검증하려면 `LocalProfileSwaggerIntegrationTest`처럼 `@ActiveProfiles("local")`로 별도 컨텍스트를 띄웁니다(`SwaggerExposureIntegrationTest`).
+- **`@ProductCodeFormat`에 `@ReportAsSingleViolation`을 붙이지 않음**: 붙이면 64자 초과도 형식 메시지로 바뀝니다. 지금은 `@Size`·`@Pattern`이 각자 메시지를 내고, springdoc도 합성 제약의 `pattern`/`maxLength`를 스키마에 그대로 반영합니다. `null`은 통과하므로 필수 필드는 `@NotNull`을 따로 붙입니다.
 
 ## 의존성
 - common → stock: `common.exception.GlobalExceptionHandler` → `stock.command.validation.QuantityLimit`
 - 내부: `config` → `ratelimit`, `ratelimit` → `exception`(`TooManyRequestsException`), `exception` → `response`
-- common에 의존하는 쪽: `product.api`/`product.query`, `stock.api`/`stock.command`/`stock.query`(`common.exception`, `common.response`)
+- common에 의존하는 쪽: `product.api`/`product.query`, `stock.api`/`stock.command`/`stock.query`(`common.exception`, `common.response`), `product.api.ProductApi`·`stock.command.dto`(`common.validation.ProductCodeFormat`)
 
 ## 배경·이유
 - DB 세션 타임아웃은 상품 행 락을 오래 기다리거나 쿼리가 길어질 때 커넥션을 무한정 붙잡지 않기 위해서입니다. Hikari `connection-timeout: 3000`도 종료 대기(20s) 안에 끝나도록 짧게 둡니다(`application.yml` 주석, 커밋 9ec05ad).
