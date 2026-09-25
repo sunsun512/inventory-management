@@ -10,7 +10,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "stock_history")
@@ -43,12 +42,6 @@ public class StockHistory {
     private Instant createdAt;
 
     protected StockHistory() {
-    }
-
-    public StockHistory(Long productId, StockType type, Long quantity, Long beforeQuantity,
-                         Long afterQuantity, String requestId) {
-        this(productId, type, quantity, beforeQuantity, afterQuantity, requestId,
-                Instant.now().truncatedTo(ChronoUnit.MICROS));
     }
 
     /**

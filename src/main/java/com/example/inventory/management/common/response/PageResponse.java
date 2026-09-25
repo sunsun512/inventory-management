@@ -3,7 +3,6 @@ package com.example.inventory.management.common.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
-import java.util.function.Function;
 
 /**
  * Offset page without a total count: the query fetches {@link #fetchLimit(int) size + 1} rows and
@@ -43,10 +42,5 @@ public record PageResponse<T>(
     /** Row offset of a page, computed in long so a huge page number cannot overflow. */
     public static long offset(int page, int size) {
         return (long) page * size;
-    }
-
-    public <R> PageResponse<R> map(Function<? super T, ? extends R> mapper) {
-        List<R> mapped = content.stream().<R>map(mapper).toList();
-        return new PageResponse<>(mapped, page, size, hasNext);
     }
 }

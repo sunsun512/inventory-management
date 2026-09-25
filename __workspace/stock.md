@@ -42,7 +42,7 @@
 - **마이그레이션**: 커밋된 파일 수정 금지, `DROP`/데이터 삭제는 사용자 확인 필수(`.claude/rules/db-migration.md`). `CONCURRENTLY` 파일에는 `CONCURRENTLY` 구문만 두고, 실패 시 INVALID 인덱스를 지우고 `flyway repair` 후 재실행(V3 주석).
 
 ## 의존성
-- stock → common: `common.exception`(예외들, `SqlStates`), `common.response`(`ErrorResponse`, `PageResponse`)
+- stock → common: `common.exception`(예외들, `SqlStates`), `common.response`(`ErrorResponse`, `PageResponse`), `common.validation`(`@ProductCodeFormat`)
 - stock → product: `stock.command.StockMutationExecutor` → `product.domain.Product`/`ProductRepository`, `stock.query.StockHistoryQueryService` → `product.domain.ProductRepository`
 - 내부: `stock.api` → `stock.command`만 사용. `command`/`query`는 서로 참조하지 않습니다.
 - stock에 의존하는 쪽: `product.api.ProductController`/`ProductApi` → `stock.query.StockHistoryQueryService`, `stock.query.dto.StockHistoryResponse`; `common.exception.GlobalExceptionHandler` → `stock.command.validation.QuantityLimit`
