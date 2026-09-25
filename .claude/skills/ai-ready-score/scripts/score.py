@@ -39,7 +39,7 @@ from pathlib import Path, PurePosixPath
 # Constants
 # ---------------------------------------------------------------------------
 
-SCRIPT_VERSION = "1.2.0"  # bump when scoring logic changes, so score deltas can be attributed
+SCRIPT_VERSION = "1.3.0"  # bump when scoring logic changes, so score deltas can be attributed
 
 EXCLUDE_DIRS = {
     ".git", "node_modules", "build", "dist", "target", "out", "bin", "obj", ".gradle",
@@ -291,6 +291,130 @@ def is_doc(rel: str) -> bool:
 
 def is_readme(rel: str) -> bool:
     return PurePosixPath(rel).name.lower().startswith("readme")
+
+
+# ---------------------------------------------------------------------------
+# Link-following context discovery
+# ---------------------------------------------------------------------------
+
+LINK_HOPS = 2  # rubric A: "어디를 봐야 하는가"를 1-2 hops 안에 찾을 수 있음
+RULE_DIR_PREFIXES = (".claude/rules/", ".cursor/rules/", ".github/instructions/")
+LINKABLE_DOC_EXT = {".md", ".mdx", ".mdc"}
+
+
+def is_link_seed(rel: str) -> bool:
+    """Files an agent reads on its own; docs they link to are part of the AI context."""
+    return is_primary_context(rel) or (rel.startswith(RULE_DIR_PREFIXES) and is_doc(rel))
+
+
+def doc_link_targets(text: str) -> list[str]:
+    """Raw doc-link targets: markdown link targets and backticked .md paths (fences excluded)."""
+    no_fence = FENCE_RE.sub("", text)
+    targets = []
+    for m in MDLINK_RE.finditer(no_fence):
+        targets.append(m.group(1).strip("<>"))
+    for m in BACKTICK_RE.finditer(no_fence):
+        tok = m.group(1).strip()
+        if PurePosixPath(tok.split("#")[0]).suffix.lower() in LINKABLE_DOC_EXT:
+            targets.append(tok)
+    out = []
+    for t in targets:
+        if re.match(r"^[a-z][\w+.-]*:", t, re.I) or t.startswith(("#", "//")):  # URL, mailto:, anchor
+            continue
+        t = t.split("#")[0].split("?")[0]
+        if t and " " not in t and not any(c in t for c in "<>{}*$"):
+            out.append(t)
+    return list(dict.fromkeys(out))
+
+
+def resolve_doc_link(repo: Repo, target: str, from_file: str) -> str | None:
+    """Resolve a link target to a doc file in the repo: relative to the linking file first,
+    then relative to the repo root (backticked paths in CLAUDE.md-style docs are usually root-relative)."""
+    from urllib.parse import unquote
+    target = unquote(target)
+    base = PurePosixPath(from_file).parent
+    cands = [target.lstrip("/")] if target.startswith("/") else [str(base / target), target]
+    for c in cands:
+        norm = os.path.normpath(c).replace(os.sep, "/")
+        if norm.startswith("..") or norm == ".":
+            continue
+        if norm in repo.file_set and is_doc(norm):
+            return norm
+        if norm in repo.dirs:  # link to a directory → its README
+            readme = next((f"{norm}/{n}" for n in ("README.md", "readme.md", "index.md")
+                           if f"{norm}/{n}" in repo.file_set), None)
+            if readme:
+                return readme
+    return None
+
+
+def discover_linked_context(repo: Repo, seeds: list[str], hops: int = LINK_HOPS) -> dict[str, list[str]]:
+    """BFS over doc links from the seed files, up to `hops` hops.
+    Returns {reached doc: [seed, ..., doc]} for every doc that is not itself a seed."""
+    seeds = sorted(dict.fromkeys(seeds), key=lambda f: (not is_primary_context(f), "/" in f, f))
+    paths: dict[str, list[str]] = {s: [s] for s in seeds}
+    frontier = list(seeds)
+    for _ in range(hops):
+        nxt = []
+        for f in frontier:
+            for t in doc_link_targets(repo.text(f)):
+                doc = resolve_doc_link(repo, t, f)
+                if doc and doc not in paths:
+                    paths[doc] = paths[f] + [doc]
+                    nxt.append(doc)
+        frontier = nxt
+    return {d: p for d, p in paths.items() if len(p) > 1}
+
+
+def first_h1(text: str) -> str:
+    """First ATX H1 outside code fences and YAML front matter."""
+    text = FENCE_RE.sub("", re.sub(r"\A---\n.*?\n---\n", "", text, flags=re.S))
+    m = re.search(r"^#[ \t]+(.+?)[ \t#]*$", text, re.M)
+    return m.group(1).strip() if m else ""
+
+
+MODULE_UNIT_WORDS = (r"(package|module|패키지|모듈|도메인|domain|service|서비스|component|컴포넌트|layer|레이어|계층|"
+                     r"app|앱|guide|가이드|directory|디렉터리|폴더|folder)")
+
+
+def h1_names_module(h1: str, mod: dict, use_name: bool) -> bool:
+    """Conservative: the H1 is the module name/path itself, names it in backticks, contains its full
+    path, or pairs the name with a unit word (`# stock 패키지`, `# Module stock`). A bare word
+    inside a longer title (`# Common Pitfalls`) does not count."""
+    keys = {mod["path"].lower(), mod.get("label", mod["path"]).lower()} | ({mod["name"].lower()} if use_name else set())
+    keys.discard(".")
+    low = h1.lower()
+    plain = re.sub(r"[`*_\"'“”:()\[\].,!?-]+", " ", low).strip()
+    for k in keys:
+        if plain == k or f"`{k}`" in low or f"`{k}/`" in low:
+            return True
+        if "/" in k and re.search(rf"(?<![\w/-]){re.escape(k)}(?![\w-])", low):
+            return True
+        w = rf"(?<![\w/-]){re.escape(k)}/?(?![\w/-])"
+        if re.search(rf"{w}\s*{MODULE_UNIT_WORDS}(?!\w)|(?<!\w){MODULE_UNIT_WORDS}\s+{w}", plain):
+            return True
+    return False
+
+
+def dedicated_docs(repo: Repo, mod: dict, ctx_docs: list[str], modules: list[dict]) -> list[str]:
+    """AI context docs dedicated to one module, wherever they live: file stem equals the module name/label
+    (`stock.md`, `docs/stock/README.md`), or the first H1 names this module and no other module."""
+    names = Counter(m["name"].lower() for m in modules)
+    use_name = names[mod["name"].lower()] == 1  # ambiguous names (a/api, b/api) only match by path
+    keys = {mod.get("label", mod["path"]).lower()} | ({mod["name"].lower()} if use_name else set())
+    out = []
+    for f in ctx_docs:
+        p = PurePosixPath(f)
+        stem = p.stem.lower()
+        if stem in keys or (stem in {"readme", "index", "claude", "agents"} and p.parent.name.lower() in keys
+                            and str(p.parent) != "."):
+            out.append(f)
+            continue
+        h1 = first_h1(repo.text(f, 20_000))
+        if h1 and h1_names_module(h1, mod, use_name) and not any(
+                o is not mod and h1_names_module(h1, o, names[o["name"].lower()] == 1) for o in modules):
+            out.append(f)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -549,8 +673,11 @@ def score_repo(repo: Repo) -> dict:
     module_prefix = common_module_prefix(modules)
     for m in modules:
         m["label"] = m["path"][len(module_prefix) + 1:] if module_prefix else m["path"]
-    ai_ctx = [f for f in files if is_ai_context(f)]
-    primary = [f for f in ai_ctx if is_primary_context(f)]
+    static_ctx = [f for f in files if is_ai_context(f)]
+    primary = [f for f in static_ctx if is_primary_context(f)]
+    # Docs reachable from CLAUDE.md/AGENTS.md/rules via links (≤ LINK_HOPS) are AI context too.
+    linked = discover_linked_context(repo, [f for f in static_ctx if is_link_seed(f)])
+    ai_ctx = static_ctx + sorted(f for f in linked if f not in static_ctx)
     readmes = [f for f in files if is_readme(f) and is_doc(f)]
     docs = [f for f in files if is_doc(f)]
     ci_files = [f for f in files if any(f.startswith(m) or f == m or f.endswith("/" + m) for m in CI_MARKERS)]
@@ -568,16 +695,25 @@ def score_repo(repo: Repo) -> dict:
 
     # ---------------- A. Navigation coverage ----------------
     mod_rows = []
+    local_by_path: dict[str, list[str]] = {}  # full list for C (the row keeps only the first 5)
+    ctx_candidates = list(dict.fromkeys(ai_ctx + readmes))
     for mod in modules:
         pat = module_mention_re(mod)
         prefix = "" if mod["path"] == "." else mod["path"] + "/"
-        local = [f for f in ai_ctx + readmes if prefix and f.startswith(prefix)]
+        inside = [f for f in ctx_candidates if prefix and f.startswith(prefix)]
         if mod["path"] == ".":
-            local = [f for f in ai_ctx + readmes if "/" not in f]
+            inside = [f for f in ctx_candidates if "/" not in f]
+        dedicated = [f for f in dedicated_docs(repo, mod, ai_ctx, modules) if f not in inside]
+        local = inside + dedicated
+        local_by_path[mod["path"]] = local
         ai_mention = [f for f in ai_ctx if f not in local and pat.search(repo.text(f))]
         readme_mention = [f for f in readmes if f not in local and pat.search(repo.text(f))]
-        if local:
+        if inside:
             weight, how = 1.0, "모듈 내부 context/README"
+        elif dedicated:
+            doc = dedicated[0]
+            chain = linked.get(doc)
+            weight, how = 1.0, f"전용 문서 {doc}" + (f" ({' → '.join(chain)})" if chain else "")
         elif ai_mention:
             weight, how = 0.6, "AI context 파일에서 언급"
         elif readme_mention:
@@ -593,7 +729,8 @@ def score_repo(repo: Repo) -> dict:
         cov, a_score = 0.0, 0
     uncovered = [m["label"] for m in mod_rows if m["coverage_weight"] < 1.0]
     put("A", a_score,
-        f"핵심 module {len(modules)}개, Navigation Coverage {cov:.0%} (내부 context=1.0, AI 문서 언급=0.6, README 언급=0.3)",
+        f"핵심 module {len(modules)}개, Navigation Coverage {cov:.0%} "
+        f"(내부 context·링크로 닿는 전용 문서=1.0, AI 문서 언급=0.6, README 언급=0.3)",
         [f"{m['label']}: {m['coverage_via']} ({m['coverage_weight']})" for m in mod_rows],
         uncovered)
 
@@ -681,9 +818,10 @@ def score_repo(repo: Repo) -> dict:
     c_rows, c_total = [], 0.0
     for mod in mod_rows:
         pat = module_mention_re(mod)
-        local_text = "\n".join(repo.text(f) for f in mod["local_context"])
+        local = local_by_path[mod["path"]]
+        local_text = "\n".join(repo.text(f) for f in local)
         window_text = "\n".join(mention_windows(repo.text(f), pat) for f in all_doc_sources
-                                if f not in mod["local_context"])
+                                if f not in local)
         mod_text = local_text + "\n" + window_text
         answers = {}
         for q, rx in FIVE_Q.items():
@@ -851,7 +989,7 @@ def score_repo(repo: Repo) -> dict:
         f_ev.append(f"CODEOWNERS가 context/문서를 커버: {owner_covers_ctx}")
     latest = repo.last_commit_date()
     ctx_dates = []
-    for f in primary[:30] or ai_ctx[:30]:
+    for f in primary[:30] or static_ctx[:30]:  # primary only; linked docs don't change staleness dates
         d_ = repo.last_commit_date(f)
         if d_:
             ctx_dates.append((f, d_))
@@ -930,7 +1068,8 @@ def score_repo(repo: Repo) -> dict:
         "modules": mod_rows,
         "module_prefix": module_prefix,
         "five_questions": c_rows,
-        "context_files": {"ai_context": ai_ctx, "primary": primary, "per_file_b": per_file},
+        "context_files": {"ai_context": ai_ctx, "primary": primary, "per_file_b": per_file,
+                          "linked": {d: " → ".join(p) for d, p in sorted(linked.items())}},
     }
 
 
@@ -962,7 +1101,7 @@ def default_actions(result: dict) -> list[dict]:
         add("B1", "S", "루트 CLAUDE.md/AGENTS.md 생성 (25-35줄)",
             "프로젝트 개요, 자주 쓰는 명령어, 핵심 파일 3-5개, 주의할 규칙, See also로 구성")
     add("A", "M", "미안내 module에 navigation guide 추가",
-        "module마다 역할·entry point·관련 파일을 담은 짧은 CLAUDE.md(또는 루트 문서의 module 섹션) 작성",
+        "module마다 역할·entry point·관련 파일을 담은 짧은 CLAUDE.md, 또는 CLAUDE.md에서 링크한 module 전용 문서(파일명이나 첫 H1이 module 이름) 작성",
         targets=gaps["A"])
     add("B1", "S", "context 문서를 compass 수준으로 압축",
         "약 1,000 tokens를 넘는 부분은 하위 문서로 분리하고 링크만 남김", targets=gaps["B1"])
@@ -1035,6 +1174,14 @@ def rank_actions(actions: list[dict], top: int) -> list[dict]:
 # Assembly
 # ---------------------------------------------------------------------------
 
+def display_path(p: Path) -> str:
+    """Path relative to the working directory when possible, so committed reports don't embed home dirs."""
+    try:
+        return p.relative_to(Path.cwd().resolve()).as_posix() or "."
+    except ValueError:
+        return str(p)
+
+
 def grade_for(total: float) -> dict:
     for threshold, level, meaning in GRADES:
         if total >= threshold:
@@ -1092,7 +1239,7 @@ def assemble(repo: Repo, raw: dict, overrides: dict, top: int) -> dict:
     return {
         "schema_version": 2,
         "generated_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
-        "repo": {"name": repo.root.name, "path": str(repo.root), "commit": head, "branch": branch,
+        "repo": {"name": repo.root.name, "path": display_path(repo.root), "commit": head, "branch": branch,
                  "files_scanned": len(repo.files)},
         "total": total,
         "auto_total": auto_total,
@@ -1105,7 +1252,8 @@ def assemble(repo: Repo, raw: dict, overrides: dict, top: int) -> dict:
         "module_prefix": raw["module_prefix"],
         "five_questions": raw["five_questions"],
         "context_files": {"ai_context": raw["context_files"]["ai_context"],
-                          "primary": raw["context_files"]["primary"]},
+                          "primary": raw["context_files"]["primary"],
+                          "linked": raw["context_files"].get("linked", {})},
         "actions": rank_actions(actions, top),
         "verification": (overrides or {}).get("verification", []),
     }

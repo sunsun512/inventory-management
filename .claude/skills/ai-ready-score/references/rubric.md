@@ -47,7 +47,8 @@
 
 **자동 채점 방식**
 - 핵심 module 탐지: 하위 디렉터리의 build manifest(package.json, build.gradle, pom.xml, pyproject.toml, go.mod, Cargo.toml …)가 2개 이상이면 그 디렉터리들이 module. 아니면 코드 파일들의 공통 소스 루트 바로 아래 디렉터리(테스트 제외, 코드 파일 2개 이상)가 module.
-- module별 가중치: module 내부에 AI context 파일/README 있음 = 1.0, AI context 파일(CLAUDE.md, AGENTS.md, .claude/rules …)에서 이름·경로로 언급됨 = 0.6, 일반 README에서만 언급 = 0.3, 없음 = 0.
+- module별 가중치: module 내부에 AI context 파일/README 있음 **또는** module 전용 AI context 문서가 있음 = 1.0, AI context 파일(CLAUDE.md, AGENTS.md, .claude/rules, 링크로 닿는 문서 …)에서 이름·경로로 언급됨 = 0.6, 일반 README에서만 언급 = 0.3, 없음 = 0.
+- module 전용 문서: 위치와 무관하게(예: `__workspace/stock.md`, `docs/guides/stock/README.md`) AI context 문서 중 ① 파일명(stem)이 module 이름과 같거나(README/index면 상위 디렉터리 이름), ② 첫 H1이 이 module 하나만 가리키는 것(`# stock 패키지`, ``# `stock` ``, module 전체 경로 포함). `# Architecture`, `# Common Pitfalls`처럼 이름이 제목 속 일반 단어로만 나오거나 여러 module을 함께 부르는 문서는 전용 문서가 아니다. 증거에는 어떤 문서가 어떤 링크 경로(`CLAUDE.md → __workspace/README.md → __workspace/stock.md`)로 닿는지 표시된다.
 - 점수 = `round(15 × 평균 가중치)`.
 
 **판단 보정 포인트**: module 탐지가 틀렸으면(예: 실제 핵심 workflow가 디렉터리 구조와 다름) 올바른 module 목록 기준으로 재계산한다. 단순 언급이 아니라 "역할 + entry point + 관련 파일"까지 안내하는지 확인한다.
@@ -95,8 +96,8 @@
 5. What tribal knowledge is hidden in comments/history/human memory?
 
 **자동 채점 방식**
-- module 전용 텍스트 = module 내부 context/README + 전역 문서에서 module 이름·경로가 언급된 줄 ±3줄.
-- 전역 텍스트 = 모든 AI context 파일, CONTRIBUTING, ADR, playbook/checklist/runbook 문서.
+- module 전용 텍스트 = module 내부 context/README + module 전용 AI context 문서(A와 같은 판정, 위치 무관) + 그 밖의 문서에서 module 이름·경로가 언급된 줄 ±3줄.
+- 전역 텍스트 = 모든 AI context 파일(링크로 닿는 문서 포함), CONTRIBUTING, ADR, playbook/checklist/runbook 문서.
 - 질문별 키워드가 module 전용 텍스트에 있으면 1.0, 전역 텍스트에만 있으면 0.5.
 - 점수 = `round(20 × 전체 module·질문 평균)`.
 - 참고 증거: 코드 내 TODO/FIXME/HACK/XXX 주석 수(주석에만 흩어진 암묵지의 신호, 점수엔 미반영).
@@ -136,7 +137,7 @@ Meta 사례의 핵심 문제는 "한 field change가 six subsystems에 ripple ef
 AI-ready는 "AI가 읽기 좋은 문서"가 아니라 **검증된 문맥 인프라**다 ("zero hallucinated paths").
 
 **자동 채점 방식**
-- E1: 모든 AI context 파일의 경로 참조(backtick, 마크다운 링크)와 `./script`, `npm run X`, `make X` 명령을 실제 repo와 대조. 깨진 참조 0건 & 참조 3건 이상 → 5, 0건이나 참조 3건 미만 → 3, 깨진 비율 ≤5% → 3, ≤15% → 2, ≤30% → 1, 초과 → 0. context 파일 없음 → 0.
+- E1: 모든 AI context 파일(링크로 닿는 문서 포함)의 경로 참조(backtick, 마크다운 링크)와 `./script`, `npm run X`, `make X` 명령을 실제 repo와 대조. 깨진 참조 0건 & 참조 3건 이상 → 5, 0건이나 참조 3건 미만 → 3, 깨진 비율 ≤5% → 3, ≤15% → 2, ≤30% → 1, 초과 → 0. context 파일 없음 → 0.
 - E2: PR 템플릿 +1, CODEOWNERS +1, 리뷰 체크리스트/리뷰 에이전트/자동 리뷰 설정(.claude/agents/*review*, .coderabbit.yaml, dangerfile, review 워크플로) +2. 최대 4.
 - E3: context 문서에 등장하는 검증 명령 종류(build/test/lint·format/typecheck/e2e) 1 → 1, 2 → 2, 3+ → 3, CI가 테스트를 실행하면 +1. 최대 4.
 - E4: evals 디렉터리/evals.json/promptfoo 설정/golden task 파일 → 2, 문서에 대표 AI task 예시만 있음 → 1.
@@ -196,6 +197,8 @@ failed PR/rework rate, hallucinated file path count, time-to-first-correct-chang
 ## 핵심 개념 정의
 
 - **AI context 파일**: AI 에이전트가 자동/명시적으로 읽도록 만든 파일. CLAUDE.md, AGENTS.md, GEMINI.md, `.github/copilot-instructions.md`, `.cursorrules`, `.cursor/rules/*`, `.windsurfrules`, `.claude/rules/*`, `.claude/skills/*/SKILL.md`, CONTEXT.md, `docs/ai/*`.
+  - **링크 추적**: primary context 파일과 rules 파일(`.claude/rules/*`, `.cursor/rules/*`, `.github/instructions/*`)에서 마크다운 링크나 backtick `.md` 경로로 **2 hop 이내**에 닿는 문서도 AI context 파일이다(예: `CLAUDE.md → __workspace/README.md → __workspace/stock.md`). 링크는 링크한 파일 기준 상대 경로로 먼저 풀고, 안 되면 repo 루트 기준으로 푼다. 외부 URL·앵커는 무시하고, 디렉터리 링크는 그 안의 README.md로 본다. 이 문서들은 A·C·D·E1·E3·E4에 반영되지만 B 채점과 F의 갱신일 판정은 primary 파일만 본다.
+  - **module 전용 문서**: AI context 파일 중 파일명이 module 이름과 같거나 첫 H1이 그 module 하나만 가리키는 문서(A 참조). module 내부에 있지 않아도 module 내부 문서와 같이 취급한다(A 가중치 1.0, C의 module 전용 텍스트).
 - **Primary context 파일**: 위 중 navigation 역할을 하는 파일(CLAUDE.md/AGENTS.md/GEMINI.md/copilot-instructions/.cursorrules/.windsurfrules/CONTEXT.md). B 카테고리 채점 대상.
 - **예상 상승**: 그 액션 하나만 완료했을 때 오르는 점수. 항목의 남은 점수 전체가 아니라 현재 빠진 구성요소 기준으로 계산한다(예: D에서 문서만 쓰면 +3, 아키텍처 테스트까지 해야 +5 추가). 한 파일이 여러 항목을 채우면(CODEOWNERS → E2·D·F) 합산.
 - **ROI**: `ROI = 예상 상승 ÷ 노력(S=1, M=2, L=3)`. 액션 리스트는 ROI 내림차순.
