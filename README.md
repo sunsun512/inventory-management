@@ -23,6 +23,7 @@ Develop
 - IM4 - 데이터베이스 연동
 - IM5 - 문서화
 - IM6 - 고가용성을 위한 설계
+- IM7 - 운영 안정성
 
 # 실행 방법
 
@@ -57,6 +58,10 @@ docker compose -f local/docker-compose.yml up -d
 | `/actuator/health/readiness` (`/readyz`) | 요청을 받을 준비가 되었는가 (실패 시 트래픽 제외) | 애플리케이션 상태 + DB |
 
 - 기동 중(마이그레이션 포함)이거나 종료 중이면 readiness가 503을 반환합니다.
+
+## API 로그
+- 요청마다 `[REQ]`, `[RES]`(상태 코드, 소요 시간) 로그를 남깁니다(로거 `API_LOGGER`). 헬스체크 경로는 제외합니다.
+- 모든 로그에 요청별 traceId가 붙고, 응답 헤더 `X-Trace-Id`로도 내려줍니다.
 
 ## 로컬 시드 데이터
 `local` 프로필로 기동하면 테이블이 비어 있을 때만 상품 10,000개와 재고 이력 약 10만 건을 생성합니다(약 20초, `src/main/resources/data.sql`).

@@ -2,9 +2,8 @@ package com.example.inventory.management.common.exception;
 
 import com.example.inventory.management.common.response.ErrorResponse;
 import com.example.inventory.management.stock.command.validation.QuantityLimit;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
@@ -48,9 +47,8 @@ import java.util.Optional;
  * request is logged: services throw without logging, so each failure produces exactly one log line.
  */
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     private static final String QUANTITY_LIMIT_CONSTRAINT = QuantityLimit.class.getSimpleName();
 

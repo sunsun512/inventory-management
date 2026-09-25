@@ -27,6 +27,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-flyway'
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1'
+    // 요청마다 traceId를 발급해 로그(MDC)와 X-Trace-Id 응답 헤더에 싣는다. 수집 서버로 보내는 exporter는 두지 않는다.
+    implementation 'org.springframework.boot:spring-boot-micrometer-tracing-opentelemetry'
+    implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
     // QueryDSL (OpenFeign fork: Jakarta Persistence / Hibernate 7 호환). Q클래스는 빌드 시
     // build/generated/sources/annotationProcessor 아래에 생성되며 git에 포함하지 않는다.
     implementation 'io.github.openfeign.querydsl:querydsl-jpa:7.7'
