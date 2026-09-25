@@ -45,6 +45,15 @@ spring:
       # 동시 실행 차단은 그대로이고, 각 마이그레이션의 트랜잭션 실행 여부에는 영향이 없다.
       transactional-lock: false
 
+rate-limit:
+  # POST API 요청을 클라이언트 IP별로 제한한다(토큰 버킷). 초과하면 429 TOO_MANY_REQUESTS와 Retry-After를 응답한다.
+  # 버킷은 인스턴스 메모리에 두므로 인스턴스가 N대면 실제 한도는 N배가 된다.
+  post:
+    # 한 번에 몰아서 보낼 수 있는 최대 요청 수
+    capacity: ${RATE_LIMIT_CAPACITY:20}
+    # 초당 다시 채워지는 요청 수(평균 허용 속도)
+    refill-per-second: ${RATE_LIMIT_REFILL_PER_SECOND:10}
+
 management:
   endpoints:
     web:
