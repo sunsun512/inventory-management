@@ -15,8 +15,7 @@ import com.example.inventory.management.stock.command.dto.StockChangeResponse;
 import com.example.inventory.management.stock.domain.StockHistory;
 import com.example.inventory.management.stock.domain.StockHistoryRepository;
 import com.example.inventory.management.stock.domain.StockType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,9 +43,8 @@ import java.util.function.Supplier;
  * request exactly once, so the exception message carries the context needed to diagnose it.
  */
 @Component
+@Slf4j
 class StockMutationExecutor {
-
-    private static final Logger log = LoggerFactory.getLogger(StockMutationExecutor.class);
 
     private final ProductRepository productRepository;
     private final StockHistoryRepository stockHistoryRepository;
