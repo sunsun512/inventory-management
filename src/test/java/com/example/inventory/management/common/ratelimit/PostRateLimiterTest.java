@@ -72,6 +72,37 @@ class PostRateLimiterTest {
     }
 
     @Test
+    void 나누어떨어지지_않아도_다_채워지기_전에는_버킷을_버리지_않는다() {
+        // 초당 3개씩 채워지므로 빈 버킷(용량 1)이 가득 차려면 333,333,333.33...ns → 333,333,334ns가 걸린다.
+        PostRateLimiter rateLimiter = new PostRateLimiter(new RateLimitProperties(1, 3), timeMeter, timeMeter);
+        rateLimiter.tryConsume(CLIENT);
+
+        timeMeter.advance(Duration.ofNanos(333_333_333));
+
+        // 아직 1개가 다 차지 않았으므로 거절되어야 한다. 만료를 내림으로 계산하면 가득 찬 새 버킷을 받아 통과해 버린다.
+        assertThat(rateLimiter.tryConsume(CLIENT).isConsumed()).isFalse();
+    }
+
+    @Test
+    void 용량이_매우_커도_생성할_수_있다() {
+        // 용량 100억, 초당 100만 → 가득 차는 데 10,000초. 용량 × 10^9ns 가 long 범위를 넘는 값이다.
+        PostRateLimiter rateLimiter = new PostRateLimiter(new RateLimitProperties(10_000_000_000L, 1_000_000), timeMeter);
+
+        assertThat(rateLimiter.tryConsume(CLIENT).getRemainingTokens()).isEqualTo(9_999_999_999L);
+        assertThat(new PostRateLimiter(new RateLimitProperties(Long.MAX_VALUE, 1), timeMeter)
+                .tryConsume(CLIENT).isConsumed()).isTrue();
+    }
+
+    @Test
+    void 재충전_속도가_초당_10억을_넘으면_생성할_수_없다() {
+        // Bucket4j가 지원하는 최대 재충전 속도는 1 token/ns = 초당 10억 개다.
+        assertThat(new PostRateLimiter(new RateLimitProperties(1, 1_000_000_000L), timeMeter)
+                .tryConsume(CLIENT).isConsumed()).isTrue();
+        assertThatThrownBy(() -> new PostRateLimiter(new RateLimitProperties(1, 1_000_000_001L), timeMeter))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void 클라이언트마다_버킷을_따로_관리한다() {
         PostRateLimiter rateLimiter = new PostRateLimiter(new RateLimitProperties(1, 1), timeMeter);
         rateLimiter.tryConsume(CLIENT);
