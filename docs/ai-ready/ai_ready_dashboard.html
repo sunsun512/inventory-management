@@ -33,7 +33,7 @@ h4 { margin:12px 0 4px; font-size:13px; color:var(--muted); }
 .grade { font-size:20px; font-weight:700; color:var(--good); }
 .compare { margin-top:8px; font-size:14px; }
 .meter { height:10px; background:var(--line); border-radius:5px; overflow:hidden; margin-top:10px; }
-.meter .fill { height:100%; background:var(--good); width:76%; }
+.meter .fill { height:100%; background:var(--good); width:79%; }
 .ticks { position:relative; height:16px; font-size:11px; color:var(--muted); margin-top:4px; }
 .ticks span { position:absolute; transform:translateX(-50%); white-space:nowrap; }
 .summary { margin:12px 0 0; }
@@ -77,20 +77,20 @@ footer code { font-size:12px; }
 <body>
 <main>
   <h1>AI-Ready 점수표 · inventroy-management</h1>
-  <div class="muted small">feature/IM5-readme-cleanup @ 2a6a1fa · 파일 105개 스캔 ·
-    2026-09-25T13:57:03+09:00</div>
+  <div class="muted small">feature/IM8-review-agent @ 014e9cc · 파일 109개 스캔 ·
+    2026-09-25T14:03:18+09:00</div>
 
   <section class="card hero">
-    <div class="total">76<span>/100</span></div>
+    <div class="total">79<span>/100</span></div>
     <div>
       <div class="grade">AI-Ready</div>
       <div>대부분의 개발 작업에서 AI가 안정적으로 navigation, edit, verify 가능</div>
-      
+      <div class="compare">이전 <strong>develop (014e9cc)</strong> 76점 (AI-Ready) → 현재 79점 <span class="delta up">▲3</span></div><div class="muted small">채점 스크립트 버전이 다릅니다 (이전 1.3.0 → 현재 1.3.1). 일부 차이는 채점 로직 변경 때문일 수 있습니다.</div>
       <div class="meter"><div class="fill"></div></div>
       <div class="ticks"><span style="left:0;transform:none">0</span><span style="left:40%">40 Fragile</span>
         <span style="left:60%">60 Assisted</span><span style="left:75%">75 Ready</span><span style="left:90%">90 Native</span></div>
       <div class="muted small" style="margin-top:6px">휴리스틱 자동 점수입니다 (판단 보정 전).</div>
-      <p class="summary">CLAUDE.md → __workspace 패키지 문서로 이어지는 2-hop navigation이 모든 핵심 module을 덮고, 각 문서가 소유 범위·수정 패턴·실패 함정·의존성·배경을 코드 근거와 함께 답해 탐색성과 암묵지 항목이 만점이다. 문서 속 참조 87건이 모두 실존하고 표본 검증한 서술도 코드와 일치한다. 남은 약점은 자동화다: context 검증 CI·스케줄, 아키텍처 테스트, 독립 리뷰, eval 세트, 성과 측정이 없다.</p>
+      <p class="summary">CLAUDE.md → __workspace 패키지 문서로 이어지는 2-hop navigation과 코드 근거가 있는 패키지 문서로 탐색성·문서 품질·암묵지가 만점이고, IM8에서 3-round 리뷰 체계(작성자 자가 점검 → 독립 컨텍스트의 code-reviewer 에이전트 → CODEOWNERS 사람 리뷰)와 PR 템플릿이 추가되어 독립 리뷰(E2)도 만점이다. 남은 약점은 자동화다: context 경로 검증 CI·스케줄, 아키텍처 테스트, eval 세트, 성과 측정이 없다.</p>
     </div>
   </section>
 
@@ -99,7 +99,7 @@ footer code { font-size:12px; }
       <div class="cat">
         <div class="cat-head"><span class="cat-id">A</span><span class="cat-name">AI 탐색성 &amp; 커버리지
           <span class="muted small">AI Navigation &amp; Coverage</span></span>
-          
+          <span class="delta flat">±0</span>
           <span class="cat-score">15<span class="muted">/15</span></span></div>
         <div class="bar"><div class="fill" style="width:100.0%;background:var(--good)"></div></div>
         <div class="muted small level">모든 핵심 module/workflow에 navigation guide, 1-2 hops 안에 찾음</div>
@@ -107,7 +107,7 @@ footer code { font-size:12px; }
       <div class="cat">
         <div class="cat-head"><span class="cat-id">B</span><span class="cat-name">컨텍스트 문서 품질
           <span class="muted small">Context Document Quality</span></span>
-          
+          <span class="delta flat">±0</span>
           <span class="cat-score">20<span class="muted">/20</span></span></div>
         <div class="bar"><div class="fill" style="width:100.0%;background:var(--good)"></div></div>
         <div class="muted small level">하위 항목 합산</div>
@@ -115,7 +115,7 @@ footer code { font-size:12px; }
       <div class="cat">
         <div class="cat-head"><span class="cat-id">C</span><span class="cat-name">암묵지 외재화
           <span class="muted small">Tribal Knowledge Externalization</span></span>
-          
+          <span class="delta flat">±0</span>
           <span class="cat-score">20<span class="muted">/20</span></span></div>
         <div class="bar"><div class="fill" style="width:100.0%;background:var(--good)"></div></div>
         <div class="muted small level">tribal knowledge 대부분이 context/checklist/playbook에 반영, 질의로 회수 가능</div>
@@ -123,7 +123,7 @@ footer code { font-size:12px; }
       <div class="cat">
         <div class="cat-head"><span class="cat-id">D</span><span class="cat-name">모듈 간 의존성 &amp; 데이터 흐름
           <span class="muted small">Cross-Module Dependency &amp; Data Flow Mapping</span></span>
-          
+          <span class="delta flat">±0</span>
           <span class="cat-score">10<span class="muted">/15</span></span></div>
         <div class="bar"><div class="fill" style="width:66.7%;background:var(--mid)"></div></div>
         <div class="muted small level">주요 module 간 dependency와 ownership 문서화</div>
@@ -131,15 +131,15 @@ footer code { font-size:12px; }
       <div class="cat">
         <div class="cat-head"><span class="cat-id">E</span><span class="cat-name">검증 &amp; 품질 게이트
           <span class="muted small">Verification &amp; Quality Gates</span></span>
-          
-          <span class="cat-score">8<span class="muted">/15</span></span></div>
-        <div class="bar"><div class="fill" style="width:53.3%;background:var(--mid)"></div></div>
+          <span class="delta up">▲3</span>
+          <span class="cat-score">11<span class="muted">/15</span></span></div>
+        <div class="bar"><div class="fill" style="width:73.3%;background:var(--mid)"></div></div>
         <div class="muted small level">하위 항목 합산</div>
       </div>
       <div class="cat">
         <div class="cat-head"><span class="cat-id">F</span><span class="cat-name">최신성 &amp; 자동 유지
           <span class="muted small">Freshness &amp; Self-Maintenance</span></span>
-          
+          <span class="delta flat">±0</span>
           <span class="cat-score">3<span class="muted">/10</span></span></div>
         <div class="bar"><div class="fill" style="width:30.0%;background:var(--warn)"></div></div>
         <div class="muted small level">문서 owner가 있고 가끔 업데이트</div>
@@ -147,7 +147,7 @@ footer code { font-size:12px; }
       <div class="cat">
         <div class="cat-head"><span class="cat-id">G</span><span class="cat-name">에이전트 성과 측정
           <span class="muted small">Agent Performance Outcomes</span></span>
-          
+          <span class="delta flat">±0</span>
           <span class="cat-score">0<span class="muted">/5</span></span></div>
         <div class="bar"><div class="fill" style="width:0.0%;background:var(--bad)"></div></div>
         <div class="muted small level">AI 성능 개선 측정 없음</div>
@@ -172,27 +172,17 @@ footer code { font-size:12px; }
             <div class="muted small">eval 세트 기준 pass rate·tool calls·tokens·소요 시간을 context 개선 전후로 기록</div></td>
           <td class="num">+5</td><td>보통</td>
           <td class="num"><strong>2.5</strong></td></tr>
-        <tr><td class="num">4</td><td><span class="pill">E2</span></td>
-          <td><strong>독립 리뷰 체크리스트/리뷰 에이전트 추가</strong>
-            <div class="muted small">.claude/agents/reviewer.md 또는 자동 리뷰로 2차 검토</div></td>
-          <td class="num">+2</td><td>작음</td>
-          <td class="num"><strong>2.0</strong></td></tr>
-        <tr><td class="num">5</td><td><span class="pill">E4</span></td>
+        <tr><td class="num">4</td><td><span class="pill">E4</span></td>
           <td><strong>대표 AI task eval 세트 만들기</strong>
             <div class="muted small">자주 하는 작업 5-10개를 프롬프트 + 기대 결과(수정 파일, 통과 테스트)로 저장</div></td>
           <td class="num">+2</td><td>보통</td>
           <td class="num"><strong>1.0</strong></td></tr>
-        <tr><td class="num">6</td><td><span class="pill">E2</span></td>
-          <td><strong>PR 템플릿에 AI 변경 검증 체크리스트 추가</strong>
-            <div class="muted small">참조 경로 확인, 테스트 결과 첨부, context 문서 갱신 여부 체크</div></td>
-          <td class="num">+1</td><td>작음</td>
-          <td class="num"><strong>1.0</strong></td></tr>
-        <tr><td class="num">7</td><td><span class="pill">E3</span></td>
+        <tr><td class="num">5</td><td><span class="pill">E3</span></td>
           <td><strong>변경 유형별 검증 명령 명시</strong>
             <div class="muted small">context 문서에 빠진 종류의 검증 명령 추가</div><div class='targets'><code class='chip'>lint/format</code><code class='chip'>typecheck</code><code class='chip'>e2e</code></div></td>
           <td class="num">+1</td><td>작음</td>
           <td class="num"><strong>1.0</strong></td></tr>
-        <tr><td class="num">8</td><td><span class="pill">E3</span></td>
+        <tr><td class="num">6</td><td><span class="pill">E3</span></td>
           <td><strong>CI에서 테스트 실행</strong>
             <div class="muted small">PR마다 테스트를 돌리는 CI 워크플로 추가</div></td>
           <td class="num">+1</td><td>보통</td>
@@ -217,7 +207,13 @@ footer code { font-size:12px; }
           <td><span class="vr ok">일치</span></td>
           <td class="small">stock/api/*.java import: stock.command.*, common.response.ErrorResponse</td></tr><tr><td>ddl-auto: validate 적용 범위</td>
           <td><span class="vr ng">불일치 → 수정</span></td>
-          <td class="small">application-local.yml:25에만 존재. CLAUDE.md를 &#x27;local 프로필에서만&#x27;으로 정정</td></tr></tbody></table>
+          <td class="small">application-local.yml:25에만 존재. CLAUDE.md를 &#x27;local 프로필에서만&#x27;으로 정정</td></tr><tr><td>체크리스트: 새 비즈니스 오류는 ErrorCode + InventoryException 하위 클래스</td>
+          <td><span class="vr ok">일치</span></td>
+          <td class="small">common/exception의 7개 예외가 InventoryException(ErrorCode, message) 상속</td></tr><tr><td>체크리스트: rate limit 버킷 만료 ≥ capacity ÷ refill-per-second</td>
+          <td><span class="vr ok">일치</span></td>
+          <td class="small">커밋 0717d80, PostRateLimiter.java:51-60</td></tr><tr><td>code-reviewer 에이전트 정의로 실제 리뷰 가능 (스모크 테스트)</td>
+          <td><span class="vr ok">일치</span></td>
+          <td class="small">커밋 0717d80 리뷰: file:line 근거 2건, 체크리스트 항목별 판정, PostRateLimiterTest 7건 통과. 피드백 4건을 정의·체크리스트에 반영</td></tr></tbody></table>
     <div class="muted small" style="margin-top:8px">스크립트가 아니라 리뷰어(사람/에이전트)가 context 문서의 서술을 코드와 대조한 기록입니다.</div>
   </section>
   <h2>세부 항목 & 근거</h2>
@@ -236,7 +232,7 @@ footer code { font-size:12px; }
           <span class="item-score">4/4</span></summary>
         <div class="item-body">
           <p class="muted">primary context 파일 1개 가중 평균 4.0/4</p>
-          <h4>근거</h4><ul><li>CLAUDE.md: 비어있지 않은 줄 32, 추정 1023 tokens</li></ul>
+          <h4>근거</h4><ul><li>CLAUDE.md: 비어있지 않은 줄 33, 추정 1101 tokens</li></ul>
           
         </div>
       </details>
@@ -272,7 +268,7 @@ footer code { font-size:12px; }
           <span class="item-score">4/4</span></summary>
         <div class="item-body">
           <p class="muted">primary context 파일 1개 가중 평균 4.0/4</p>
-          <h4>근거</h4><ul><li>CLAUDE.md: 상호 참조 8건</li></ul>
+          <h4>근거</h4><ul><li>CLAUDE.md: 상호 참조 11건</li></ul>
           
         </div>
       </details>
@@ -281,7 +277,7 @@ footer code { font-size:12px; }
           <span class="item-score">20/20</span></summary>
         <div class="item-body">
           <p class="muted">module별 Five-Question 답변 가능 여부 (module 전용 문서=1.0, 전역 문서만=0.5)</p>
-          <h4>근거</h4><ul><li>common: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0</li><li>stock: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0</li><li>product: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0</li><li>전역 지식 소스 10개: [&#x27;.claude/rules/db-migration.md&#x27;, &#x27;.claude/rules/git-branch.md&#x27;, &#x27;.claude/rules/package-docs.md&#x27;, &#x27;.claude/rules/tdd.md&#x27;, &#x27;CLAUDE.md&#x27;, &#x27;README.md&#x27;, &#x27;__workspace/README.md&#x27;, &#x27;__workspace/common.md&#x27;]</li><li>ADR/decision 문서 0개, 코드 내 TODO/FIXME/HACK/XXX 주석 0개</li></ul>
+          <h4>근거</h4><ul><li>common: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0</li><li>stock: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0</li><li>product: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0</li><li>전역 지식 소스 13개: [&#x27;.claude/agents/code-reviewer.md&#x27;, &#x27;.claude/rules/db-migration.md&#x27;, &#x27;.claude/rules/git-branch.md&#x27;, &#x27;.claude/rules/package-docs.md&#x27;, &#x27;.claude/rules/review-before-pr.md&#x27;, &#x27;.claude/rules/tdd.md&#x27;, &#x27;CLAUDE.md&#x27;, &#x27;README.md&#x27;]</li><li>ADR/decision 문서 0개, 코드 내 TODO/FIXME/HACK/XXX 주석 0개</li></ul>
           
         </div>
       </details>
@@ -290,7 +286,7 @@ footer code { font-size:12px; }
           <span class="item-score">10/15</span></summary>
         <div class="item-body">
           <p class="muted">diagram·architecture 문서·dependency note(+5) / 전용 dependency·data-flow 섹션(+3) / ownership(+2) / machine-readable graph(+5)</p>
-          <h4>근거</h4><ul><li>본문 dependency note 6건: CLAUDE.md: …n/` (entities, repositories). Dependency direction is `api → command / query → domain`; `command` and `query` never reference | README.md: - 의존 방향: `api → command / query → domain`. `command`와 `query`는 서로 참조하지 않습니다. | __workspace/product.md: …ON CONFLICT (product_code) DO NOTHING` → 빈 결과. 호출자가 409로 바꿉니다.</li><li>dependency/data-flow 섹션: [&#x27;__workspace/common.md&#x27;, &#x27;__workspace/product.md&#x27;, &#x27;__workspace/stock.md&#x27;]</li><li>ownership: [&#x27;.github/CODEOWNERS&#x27;]</li></ul>
+          <h4>근거</h4><ul><li>본문 dependency note 6건: CLAUDE.md: …n/` (entities, repositories). Dependency direction is `api → command / query → domain`; `command` and `query` never reference | README.md: - 의존 방향: `api → command / query → domain`. `command`와 `query`는 서로 참조하지 않습니다. | __workspace/product.md: …ON CONFLICT (product_code) DO NOTHING` → 빈 결과. 호출자가 409로 바꿉니다.</li><li>dependency/data-flow 섹션: [&#x27;.claude/rules/review-before-pr.md&#x27;, &#x27;__workspace/common.md&#x27;, &#x27;__workspace/product.md&#x27;, &#x27;__workspace/stock.md&#x27;]</li><li>ownership: [&#x27;.github/CODEOWNERS&#x27;]</li></ul>
           <h4>부족한 점</h4><ul><li>dependency note만 있고 architecture 문서/다이어그램 없음</li><li>&#x27;What depends on X?&#x27;에 답할 machine-readable map/아키텍처 테스트 없음</li></ul>
         </div>
       </details>
@@ -298,18 +294,18 @@ footer code { font-size:12px; }
         <summary><span class="item-id">E1</span><span class="item-name">E1. 참조 정확성 (Reference Accuracy)</span>
           <span class="item-score">5/5</span></summary>
         <div class="item-body">
-          <p class="muted">참조 87건 중 깨진 참조 0건 (0%)</p>
-          <h4>근거</h4><ul><li>검증한 참조 87건 모두 실존</li></ul>
+          <p class="muted">참조 100건 중 깨진 참조 0건 (0%)</p>
+          <h4>근거</h4><ul><li>검증한 참조 100건 모두 실존</li></ul>
           
         </div>
       </details>
       <details class="item">
         <summary><span class="item-id">E2</span><span class="item-name">E2. 독립 리뷰 (Critic Review)</span>
-          <span class="item-score">1/4</span></summary>
+          <span class="item-score">4/4</span></summary>
         <div class="item-body">
           <p class="muted">PR 템플릿(+1) / CODEOWNERS(+1) / 리뷰 체크리스트·에이전트·자동 리뷰(+2)</p>
-          <h4>근거</h4><ul><li>PR 템플릿: []</li><li>CODEOWNERS: .github/CODEOWNERS</li><li>리뷰 설정: []</li></ul>
-          <h4>부족한 점</h4><ul><li>PR 템플릿(체크리스트) 없음</li><li>독립 리뷰 체크리스트/리뷰 에이전트/자동 리뷰 없음</li></ul>
+          <h4>근거</h4><ul><li>PR 템플릿: [&#x27;.github/pull_request_template.md&#x27;]</li><li>CODEOWNERS: .github/CODEOWNERS</li><li>리뷰 설정: [&#x27;.claude/agents/code-reviewer.md&#x27;, &#x27;docs/review-checklist.md&#x27;]</li></ul>
+          
         </div>
       </details>
       <details class="item">
@@ -369,10 +365,10 @@ footer code { font-size:12px; }
   </section>
 
   <footer>
-    재현 정보 · 스크립트 v1.3.0 (<code>b31c74679ba1</code>) ·
+    재현 정보 · 스크립트 v1.3.1 (<code>07c4c2a03a34</code>) ·
     루브릭 <code>70cc8b7ed437</code> ·
-    보정 파일 <code>overrides.json</code> (<code>238cb295ecf9</code>)
-    <div>실행: <code>python3 score.py . --out docs/ai-ready --overrides docs/ai-ready/overrides.json</code></div>
+    보정 파일 <code>overrides.json</code> (<code>a5bd5e4fd927</code>)
+    <div>실행: <code>python3 score.py . --out docs/ai-ready --overrides docs/ai-ready/overrides.json --previous develop-76.json --previous-label develop (014e9cc)</code></div>
   </footer>
 </main>
 </body>
