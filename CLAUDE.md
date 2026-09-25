@@ -29,7 +29,7 @@ docker compose -f local/docker-compose.yml up -d
 
 ## Architecture
 
-- **Stack**: Java 17 (toolchain-pinned), Spring Boot 4.1.1, Spring MVC (`spring-boot-starter-webmvc`), Gradle with `io.spring.dependency-management`.
+- **Stack**: Java 17 (toolchain-pinned), Spring Boot 4.1.1, Spring MVC (`spring-boot-starter-webmvc`), Gradle with `io.spring.dependency-management`, Lombok (use `@Slf4j` for loggers), Micrometer Tracing with the OpenTelemetry bridge (traceId in logs and the `X-Trace-Id` response header; no exporter).
 - **Base package**: `com.example.inventory.management`.
 - **Testing**: JUnit 5 via `spring-boot-starter-webmvc-test`, run through the JUnit Platform (`useJUnitPlatform()` in `build.gradle`).
 - No persistence layer, web layer, or domain model is wired up yet — no database dependency is declared in `build.gradle`, so a DB choice/integration is still pending (tracked as "IM4 - 데이터베이스 연동" in the README's task list). When implementing the features above, note that persisted stock quantities and stock-change history are core requirements, not incidental — model them accordingly from the start rather than bolting history tracking on later.
