@@ -19,6 +19,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Properties;
 
 import static com.example.inventory.management.support.ProductFixtures.insertProduct;
@@ -52,7 +53,11 @@ class LocalSeedDataSqlTest {
         Properties connectionProperties = new Properties();
         connectionProperties.setProperty("options", "-c lock_timeout=3s -c statement_timeout=5s");
         dataSource.setConnectionProperties(connectionProperties);
-        Flyway.configure().dataSource(dataSource).locations("classpath:db/migration").load().migrate();
+        // application.yml의 spring.flyway.postgresql.transactional-lock=false와 같게 둔다.
+        // 기본값(트랜잭션 잠금)이면 CONCURRENTLY로 인덱스를 만드는 V3가 잠금 트랜잭션을 기다리다 lock_timeout으로 실패한다.
+        Flyway.configure().dataSource(dataSource).locations("classpath:db/migration")
+                .configuration(Map.of("flyway.postgresql.transactional.lock", "false"))
+                .load().migrate();
 
         jdbcTemplate = new JdbcTemplate(dataSource);
     }
