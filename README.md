@@ -25,6 +25,17 @@ Develop
 - IM6 - 고가용성을 위한 설계
 - IM7 - 운영 안정성
 
+# 기술 스택
+| 항목 | 용도 |
+|---|---|
+| Java 17 · Spring Boot 4.1 · JPA · QueryDSL | API 서버 |
+| PostgreSQL 17 · Flyway | DB, 스키마 변경 이력 관리 |
+| Testcontainers | 실제 Postgres 기반 통합 테스트 |
+| Actuator · Micrometer Tracing | 헬스체크, 요청별 traceId |
+| Bucket4j · Caffeine | POST 요청 속도 제한 |
+| springdoc-openapi | API 명세(Swagger) |
+| Docker Compose | 로컬 DB 구동 |
+
 # 실행 방법
 
 ## 요구사항
@@ -37,7 +48,7 @@ docker compose -f local/docker-compose.yml up -d
 ```
 `postgres:17.5`를 `5432` 포트로 띄웁니다(DB `inventory`, 사용자 `inventory-user` / `inventory-password`).
 
-> 마이그레이션 `V1`·`V2`가 수정되고 `V3`가 `V2`로 통합되었습니다. 이전 버전으로 만든 로컬 DB는 Flyway 검증에 실패하므로 초기화 후 다시 띄웁니다(데이터 삭제).
+> 초기 개발 중 마이그레이션 파일이 수정된 적이 있어, 그전에 만든 로컬 DB는 Flyway 검증에 실패할 수 있습니다. 이때는 초기화 후 다시 띄웁니다(데이터 삭제).
 > ```bash
 > docker compose -f local/docker-compose.yml down -v && docker compose -f local/docker-compose.yml up -d
 > ```
