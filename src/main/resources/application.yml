@@ -40,6 +40,29 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+management:
+  endpoints:
+    web:
+      exposure:
+        # 헬스체크만 노출한다. (env, beans 등 내부 정보는 노출하지 않는다)
+        include: health
+  endpoint:
+    health:
+      # 어떤 컴포넌트가 DOWN인지만 보여주고, DB 종류 같은 상세 정보는 외부에 노출하지 않는다.
+      show-components: always
+      show-details: never
+      probes:
+        enabled: true
+        # 관리 포트를 분리하더라도 메인 포트의 톰캣 상태를 볼 수 있도록 /livez, /readyz를 함께 노출한다.
+        add-additional-paths: true
+      group:
+        # liveness: 프로세스 자체가 살아 있는가. DB 장애는 재시작으로 해결되지 않으므로 포함하지 않는다.
+        liveness:
+          include: livenessState
+        # readiness: 지금 요청을 받을 수 있는가. DB에 연결할 수 없으면 트래픽을 받지 않는다.
+        readiness:
+          include: readinessState, db
+
 springdoc:
   # 응답 미디어 타입을 */* 대신 application/json으로 표기한다.
   default-produces-media-type: application/json
