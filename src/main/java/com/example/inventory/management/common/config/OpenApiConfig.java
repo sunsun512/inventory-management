@@ -47,7 +47,7 @@ public class OpenApiConfig {
             |:---|:---|
             | 처음으로 성공한 요청 | 정상 처리 |
             | 이미 성공한 `requestId`로 재요청 (동시 요청 포함, 요청 내용 무관) | `409 DUPLICATE_REQUEST` — 최초 처리 결과는 포함하지 않음 |
-            | 실패했던(400/404/409/503) `requestId`로 재요청 | 정상 처리 — 실패한 요청은 저장되지 않음 |
+            | 실패했던(400/404/409/429/503) `requestId`로 재요청 | 정상 처리 — 실패한 요청은 저장되지 않음 |
 
             ### 3. 검사 순서
 
@@ -69,7 +69,7 @@ public class OpenApiConfig {
 
             | HTTP | code | 상황 |
             |:---:|:---|:---|
-            | 400 | `VALIDATION_FAILED` | 요청 값 오류 — 필수값 누락, 형식 오류, JSON 오류, 본문 누락, 경로 변수 타입 오류, 범위를 벗어난 `page`·`size` 등 |
+            | 400 | `VALIDATION_FAILED` | 요청 값 오류 — 필수값 누락, 형식 오류, JSON 오류, 본문 누락, 경로 변수 타입 오류, `page` < 0·`size` < 1 등 (`size`가 100을 넘으면 오류 없이 100으로 제한) |
             | 400 | `PRODUCT_CODE_MISMATCH` | `productCode`가 `productId` 상품의 코드와 다름 |
             | 404 | `PRODUCT_NOT_FOUND` | 상품 없음 |
             | 404 | `NOT_FOUND` | 존재하지 않는 API 경로 |
@@ -81,11 +81,20 @@ public class OpenApiConfig {
             | 409 | `QUANTITY_LIMIT_EXCEEDED` | 1회 요청 `quantity`가 10,000 초과 |
             | 409 | `STOCK_QUANTITY_OVERFLOW` | 입고 결과 재고가 저장 가능한 최대값(BIGINT) 초과 |
             | 415 | `UNSUPPORTED_MEDIA_TYPE` | 지원하지 않는 `Content-Type` (예: `text/plain`, 누락) |
+            | 429 | `TOO_MANY_REQUESTS` | 클라이언트 IP별 POST 요청 한도 초과 (`Retry-After`: 대기할 초) — 처리되지 않았으므로 그 후 재시도 |
             | 500 | `INTERNAL_ERROR` | 서버 오류 |
             | 503 | `STOCK_LOCK_TIMEOUT` | 락 대기·쿼리 실행·트랜잭션 시간 초과 (`Retry-After: 1`) |
 
             - **503**은 롤백되어 반영되지 않은 상태이므로 같은 `requestId`로 안전하게 재시도할 수 있습니다.
             - Spring MVC 표준 예외는 원래 상태 코드를 유지하며, `code`는 HTTP 상태 이름(`NOT_FOUND`, `METHOD_NOT_ALLOWED` 등)입니다.
+
+            ### 5. 공통 응답 헤더
+
+            | 헤더 | 대상 | 설명 |
+            |:---|:---|:---|
+            | `X-Trace-Id` | 모든 응답 | 서버 로그와 같은 traceId — 문의 시 함께 전달 |
+            | `X-RateLimit-Remaining` | 한도 안에서 통과한 POST 응답 | 남은 요청 수 (POST API는 클라이언트 IP별로 제한) |
+            | `Retry-After` | 429·503 응답 | 재시도까지 대기할 초 |
             """;
 
     @Bean
