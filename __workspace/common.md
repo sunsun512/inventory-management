@@ -24,7 +24,7 @@
 5. 테스트: 해당 기능의 컨트롤러 통합 테스트에서 상태·`code` 검증.
 
 **요청 속도 제한 설정 변경**
-1. 값은 `RATE_LIMIT_CAPACITY` / `RATE_LIMIT_REFILL_PER_SECOND` 환경 변수 또는 `application.yml`의 `rate-limit.post`. 0 이하이면 기동 시 실패합니다(`PostRateLimiterTest`).
+1. 값은 `RATE_LIMIT_CAPACITY` / `RATE_LIMIT_REFILL_PER_SECOND` 환경 변수 또는 `application.yml`의 `rate-limit.post`. 유효 범위는 capacity 1 이상(상한 없음), refill-per-second 1~1,000,000,000(Bucket4j 최대 1 token/ns)이고, 벗어나면 기동 시 `IllegalArgumentException`으로 실패합니다(`PostRateLimiterTest`).
 2. 버킷 만료 시간은 `capacity / refill-per-second`에서 자동 계산되므로 따로 설정하지 않습니다.
 3. 동작을 바꾸면 `PostRateLimiterTest`(`FakeTimeMeter`, 가짜 ticker), `RateLimitInterceptorTest`, `RateLimitIntegrationTest`를 수정.
 

@@ -27,8 +27,11 @@ public class PostRateLimiter {
     private final Cache<String, Bucket> buckets;
 
     /**
-     * @throws IllegalArgumentException if capacity or refillPerSecond is not positive, so a bad setting
-     *                                  fails at startup instead of on every request
+     * Valid settings: capacity 1..{@link Long#MAX_VALUE}, refillPerSecond 1..1,000,000,000 (Bucket4j's highest
+     * refill rate is 1 token per nanosecond).
+     *
+     * @throws IllegalArgumentException if a setting is outside that range, so a bad setting fails at startup
+     *                                  instead of on every request
      */
     public PostRateLimiter(RateLimitProperties properties, TimeMeter timeMeter) {
         this(properties, timeMeter, Ticker.systemTicker());
@@ -54,9 +57,15 @@ public class PostRateLimiter {
      * client a new full bucket and let it bypass the limit.
      */
     private static Duration timeToRefill(RateLimitProperties properties) {
-        long capacityNanos = Math.multiplyExact(properties.capacity(), Duration.ofSeconds(1).toNanos());
+        long capacity = properties.capacity();
+        long refillPerSecond = properties.refillPerSecond();
+        // Whole seconds + remainder, so capacity * 10^9 never has to fit in a long (it overflows above ~9.2 billion).
+        // remainder < refillPerSecond <= 10^9 (checked by Bucket4j when the Bandwidth is built first), so
+        // remainder * 10^9 < 10^18 fits; multiplyExact still fails loudly if that ordering ever changes.
+        long remainderNanos = Math.multiplyExact(capacity % refillPerSecond, Duration.ofSeconds(1).toNanos());
         // Round up: expiring even 1ns early would hand out a bucket that is not yet full. (Math.ceilDiv is Java 18+.)
-        return Duration.ofNanos(-Math.floorDiv(-capacityNanos, properties.refillPerSecond()));
+        return Duration.ofSeconds(capacity / refillPerSecond)
+                .plusNanos(-Math.floorDiv(-remainderNanos, refillPerSecond));
     }
 
     public ConsumptionProbe tryConsume(String clientKey) {

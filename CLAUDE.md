@@ -39,5 +39,6 @@ docker compose -f local/docker-compose.yml up -d
 - [.claude/rules/git-branch.md](.claude/rules/git-branch.md) — read before committing or pushing: never commit/push on `develop` or `master`; use `feature/IM<n>-<short-description>` branches and PRs.
 - [.claude/rules/db-migration.md](.claude/rules/db-migration.md) — read before adding or editing Flyway migrations: never modify committed migrations; confirm with the user before any `DROP`/`TRUNCATE`/data-deleting change.
 - [.claude/rules/package-docs.md](.claude/rules/package-docs.md) — read before changing a package: open that package's doc first.
+- [.claude/rules/review-before-pr.md](.claude/rules/review-before-pr.md) — read before opening a PR: self-check with [docs/review-checklist.md](docs/review-checklist.md), then run the `code-reviewer` agent ([.claude/agents/code-reviewer.md](.claude/agents/code-reviewer.md)) and paste its output into the PR.
 - [__workspace/README.md](__workspace/README.md) — index of per-package guides for `common`, `product`, and `stock`; read when you need a package's details.
 - [README.md](README.md) — read for the full Korean requirements, design notes, API spec, environment variables, and run/test instructions.

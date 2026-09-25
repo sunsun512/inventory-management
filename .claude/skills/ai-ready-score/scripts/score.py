@@ -39,7 +39,7 @@ from pathlib import Path, PurePosixPath
 # Constants
 # ---------------------------------------------------------------------------
 
-SCRIPT_VERSION = "1.3.0"  # bump when scoring logic changes, so score deltas can be attributed
+SCRIPT_VERSION = "1.3.1"  # bump when scoring logic changes, so score deltas can be attributed
 
 EXCLUDE_DIRS = {
     ".git", "node_modules", "build", "dist", "target", "out", "bin", "obj", ".gradle",
@@ -198,7 +198,22 @@ class Repo:
     def __init__(self, root: Path, exclude_prefixes: list[str]):
         self.root = root
         self.exclude_prefixes = [p.rstrip("/") + "/" for p in exclude_prefixes if p]
+        self._text_cache: dict[str, str] = {}
         self.files = self._list_files()
+        # Earlier reports committed into the repo (any dir holding ai_ready_score.json) describe the rubric's
+        # metrics themselves, so scanning them would score the report instead of the repo (e.g. inflate G).
+        report_dirs = {str(PurePosixPath(f).parent) + "/" for f in self.files
+                       if PurePosixPath(f).name == "ai_ready_score.json"}
+        # Copies of this skill inside the scanned tree (e.g. scoring a worktree of a branch that ships it) —
+        # only the running script's own folder is excluded via exclude_prefixes.
+        report_dirs |= {str(PurePosixPath(f).parent) + "/" for f in self.files
+                        if PurePosixPath(f).name == "SKILL.md"
+                        and re.search(r"^name:\s*ai-ready-score\s*$", self.text(f, 2000), re.M)}
+        if report_dirs:
+            self.excluded_report_dirs = sorted(d.rstrip("/") for d in report_dirs)
+            self.files = [f for f in self.files if not any(f.startswith(d) for d in report_dirs)]
+        else:
+            self.excluded_report_dirs = []
         self.file_set = set(self.files)
         self.basenames = Counter(PurePosixPath(f).name for f in self.files)
         self.dirs = set()
@@ -207,7 +222,6 @@ class Repo:
             while str(parent) not in (".", ""):
                 self.dirs.add(str(parent))
                 parent = parent.parent
-        self._text_cache: dict[str, str] = {}
 
     def _git(self, *args: str) -> str:
         try:
@@ -1182,6 +1196,15 @@ def display_path(p: Path) -> str:
         return str(p)
 
 
+def display_arg(arg: str) -> str:
+    """Show path-like CLI args relative to the working directory, or just the file name if outside it."""
+    if not arg.startswith("/"):
+        return arg
+    p = Path(arg)
+    shown = display_path(p.resolve() if p.exists() else p)
+    return p.name if shown.startswith("/") else shown
+
+
 def grade_for(total: float) -> dict:
     for threshold, level, meaning in GRADES:
         if total >= threshold:
@@ -1550,7 +1573,7 @@ def previous_snapshot(path: str) -> dict:
     with open(path, encoding="utf-8") as fh:
         prev = json.load(fh)
     return {
-        "file": path,
+        "file": display_arg(path),
         "total": prev.get("total"),
         "generated_at": prev.get("generated_at"),
         "commit": prev.get("repo", {}).get("commit"),
@@ -1603,7 +1626,7 @@ def main() -> int:
         "rubric_sha": file_sha(rubric),
         "overrides_file": args.overrides,
         "overrides_sha": file_sha(Path(args.overrides)) if args.overrides else None,
-        "command": " ".join(["python3", "score.py"] + [a for a in sys.argv[1:]]),
+        "command": " ".join(["python3", "score.py"] + [display_arg(a) for a in sys.argv[1:]]),
     }
 
     out.mkdir(parents=True, exist_ok=True)
