@@ -188,6 +188,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(ErrorResponse.of(ex.getErrorCode().name(), ex.getMessage()));
     }
 
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequestsException ex) {
+        log.warn("요청 속도 제한 초과: message={}", ex.getMessage());
+        return ResponseEntity.status(ex.getErrorCode().getStatus())
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+                .body(ErrorResponse.of(ex.getErrorCode().name(), ex.getMessage()));
+    }
+
     /**
      * Postgres lock_timeout (55P03 → CannotAcquireLockException, a PessimisticLockingFailureException)
      * and statement_timeout (57014 → QueryTimeoutException), plus Spring transaction timeouts:

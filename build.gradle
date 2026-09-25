@@ -30,6 +30,9 @@ dependencies {
     // 요청마다 traceId를 발급해 로그(MDC)와 X-Trace-Id 응답 헤더에 싣는다. 수집 서버로 보내는 exporter는 두지 않는다.
     implementation 'org.springframework.boot:spring-boot-micrometer-tracing-opentelemetry'
     implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+    // POST API 요청 속도 제한(IP별 토큰 버킷). 버킷은 인스턴스 메모리(Caffeine)에 두며 Redis 등 외부 저장소는 쓰지 않는다.
+    implementation 'com.bucket4j:bucket4j_jdk17-core:8.20.0'
+    implementation 'com.github.ben-manes.caffeine:caffeine'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     // QueryDSL (OpenFeign fork: Jakarta Persistence / Hibernate 7 호환). Q클래스는 빌드 시

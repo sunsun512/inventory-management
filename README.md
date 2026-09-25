@@ -134,6 +134,12 @@ com.example.inventory.management
 - 재고 증감은 원자적 `UPDATE`로 처리하고, DB 제약으로 재고가 음수가 되지 않게 합니다.
 - 락 대기·쿼리 시간이 초과되면 503 `STOCK_LOCK_TIMEOUT`으로 응답하며, 같은 `requestId`로 재시도할 수 있습니다.
 
+## 요청 속도 제한
+- 모든 POST API는 클라이언트 IP별로 요청 수를 제한합니다. 기본값은 한 번에 20건, 초당 10건이며 `RATE_LIMIT_CAPACITY` / `RATE_LIMIT_REFILL_PER_SECOND`로 바꿀 수 있습니다.
+- 한도를 넘으면 429 `TOO_MANY_REQUESTS`와 `Retry-After`(초)로 응답합니다. 통과한 요청에는 남은 요청 수를 `X-RateLimit-Remaining` 헤더로 알려줍니다.
+- 제한 상태는 인스턴스 메모리에 두므로 인스턴스가 N대면 실제 한도는 N배이고, 재기동하면 초기화됩니다.
+- IP는 접속 주소만 사용합니다(`X-Forwarded-For` 미신뢰). 로드밸런서 뒤에 배포할 때는 `server.forward-headers-strategy` 설정이 필요합니다.
+
 ## 조회 / 페이징
 - 목록 조회(상품 목록, 재고 이력)는 `page`(기본 0), `size`(기본 10, 최대 100)를 받고 `content`, `page`, `size`, `hasNext`로 응답합니다. 전체 건수는 제공하지 않습니다.
 - 재고 이력은 `createdAt DESC, id DESC`, 상품 목록은 `productId DESC`로 정렬을 고정합니다.
