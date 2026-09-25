@@ -52,6 +52,9 @@ interface StockApi {
     @ApiResponse(responseCode = "409",
             description = "`DUPLICATE_REQUEST` / `PRODUCT_CODE_ALREADY_EXISTS` / `QUANTITY_LIMIT_EXCEEDED` / `STOCK_QUANTITY_OVERFLOW`",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "429", description = "`TOO_MANY_REQUESTS` — 클라이언트 IP별 요청 한도 초과. 처리되지 않았으므로 Retry-After 후 재시도",
+            headers = @Header(name = "Retry-After", description = "재시도까지 대기할 초", schema = @Schema(type = "integer")),
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "503", description = "`STOCK_LOCK_TIMEOUT` — 반영되지 않았으므로 같은 requestId로 재시도",
             headers = @Header(name = "Retry-After", description = "재시도까지 대기할 초", schema = @Schema(type = "integer")),
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
@@ -72,6 +75,9 @@ interface StockApi {
     @ApiResponse(responseCode = "404", description = "`PRODUCT_NOT_FOUND`",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "409", description = "`DUPLICATE_REQUEST` / `INSUFFICIENT_STOCK` / `QUANTITY_LIMIT_EXCEEDED`",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "429", description = "`TOO_MANY_REQUESTS` — 클라이언트 IP별 요청 한도 초과. 처리되지 않았으므로 Retry-After 후 재시도",
+            headers = @Header(name = "Retry-After", description = "재시도까지 대기할 초", schema = @Schema(type = "integer")),
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "503", description = "`STOCK_LOCK_TIMEOUT` — 반영되지 않았으므로 같은 requestId로 재시도",
             headers = @Header(name = "Retry-After", description = "재시도까지 대기할 초", schema = @Schema(type = "integer")),
