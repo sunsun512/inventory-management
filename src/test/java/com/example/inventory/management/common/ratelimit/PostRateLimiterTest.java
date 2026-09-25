@@ -58,6 +58,20 @@ class PostRateLimiterTest {
     }
 
     @Test
+    void 오래_쉬어도_다_채워지기_전에는_가득_찬_새_버킷을_받지_않는다() {
+        // 빈 버킷이 가득 차려면 3600초(1시간)가 걸린다.
+        PostRateLimiter rateLimiter = new PostRateLimiter(new RateLimitProperties(3600, 1), timeMeter, timeMeter);
+        for (int i = 0; i < 3600; i++) {
+            rateLimiter.tryConsume(CLIENT);
+        }
+
+        timeMeter.advance(Duration.ofMinutes(11));
+
+        // 11분 동안 660개만 다시 찼으므로, 1개를 쓰면 659개가 남아야 한다.
+        assertThat(rateLimiter.tryConsume(CLIENT).getRemainingTokens()).isEqualTo(659);
+    }
+
+    @Test
     void 클라이언트마다_버킷을_따로_관리한다() {
         PostRateLimiter rateLimiter = new PostRateLimiter(new RateLimitProperties(1, 1), timeMeter);
         rateLimiter.tryConsume(CLIENT);
