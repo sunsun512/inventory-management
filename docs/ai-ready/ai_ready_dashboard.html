@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI-Ready 점수표</title>
+<style>
+:root {
+  --bg:#f7f7f5; --card:#ffffff; --text:#1d1d1b; --muted:#6b6b66; --line:#e4e4df;
+  --good:#2f7d4f; --mid:#3d6fb6; --warn:#c07a12; --bad:#b83b3b; --accent:#3d6fb6; --pill:#eef2f8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#161614; --card:#1f1f1c; --text:#ecece8; --muted:#9a9a93; --line:#33332f;
+    --good:#5cb483; --mid:#6f9be0; --warn:#e0a24a; --bad:#e07070; --accent:#6f9be0; --pill:#26303f;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#161614; --card:#1f1f1c; --text:#ecece8; --muted:#9a9a93; --line:#33332f;
+  --good:#5cb483; --mid:#6f9be0; --warn:#e0a24a; --bad:#e07070; --accent:#6f9be0; --pill:#26303f;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text);
+  font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif; }
+main { max-width:1040px; margin:0 auto; padding:32px 16px 64px; }
+h1 { font-size:24px; margin:0 0 4px; } h2 { font-size:18px; margin:36px 0 12px; }
+h4 { margin:12px 0 4px; font-size:13px; color:var(--muted); }
+.muted { color:var(--muted); } .small { font-size:12px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; }
+.hero { display:grid; grid-template-columns:auto 1fr; gap:24px; align-items:center; margin-top:20px; }
+.total { font-size:56px; font-weight:700; line-height:1; color:var(--good); font-variant-numeric:tabular-nums; }
+.total span { font-size:20px; color:var(--muted); font-weight:500; }
+.grade { font-size:20px; font-weight:700; color:var(--good); }
+.compare { margin-top:8px; font-size:14px; }
+.meter { height:10px; background:var(--line); border-radius:5px; overflow:hidden; margin-top:10px; }
+.meter .fill { height:100%; background:var(--good); width:76%; }
+.ticks { position:relative; height:16px; font-size:11px; color:var(--muted); margin-top:4px; }
+.ticks span { position:absolute; transform:translateX(-50%); white-space:nowrap; }
+.summary { margin:12px 0 0; }
+.cats { display:grid; gap:16px; }
+.cat-head { display:flex; gap:10px; align-items:baseline; }
+.cat-id { font-weight:700; color:var(--accent); width:18px; }
+.cat-name { flex:1; } .cat-score { font-weight:700; font-variant-numeric:tabular-nums; }
+.bar { height:8px; background:var(--line); border-radius:4px; overflow:hidden; margin-top:6px; }
+.bar .fill { height:100%; border-radius:4px; }
+.level { margin-top:3px; padding-left:28px; }
+.delta { font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+.delta.up { color:var(--good); } .delta.down { color:var(--bad); } .delta.flat { color:var(--muted); }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { font-size:12px; color:var(--muted); font-weight:600; }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.pill { background:var(--pill); color:var(--accent); border-radius:6px; padding:1px 7px; font-weight:700; font-size:12px; white-space:nowrap; }
+.badge { margin-left:6px; font-size:11px; font-weight:600; color:var(--accent); border:1px solid var(--accent); border-radius:4px; padding:0 4px; }
+.targets { margin-top:4px; display:flex; flex-wrap:wrap; gap:4px; }
+.chip { background:var(--pill); border-radius:4px; padding:0 5px; font-size:12px; }
+.item { border-bottom:1px solid var(--line); }
+.item summary { display:flex; gap:10px; padding:10px 4px; cursor:pointer; list-style:none; }
+.item summary::-webkit-details-marker { display:none; }
+.item summary::before { content:"▸"; color:var(--muted); } .item[open] summary::before { content:"▾"; }
+.item-id { font-weight:700; color:var(--accent); min-width:26px; } .item-name { flex:1; }
+.item-score { font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.item-body { padding:0 8px 12px 40px; font-size:14px; } .item-body ul { margin:0; padding-left:18px; }
+.item-body li { word-break:break-word; }
+.override { background:var(--pill); border-left:3px solid var(--accent); padding:6px 10px; border-radius:4px; font-size:13px; }
+th.q, td.q { text-align:center; white-space:nowrap; } td.q { font-size:16px; }
+.q-full { color:var(--good); } .q-half { color:var(--warn); } .q-none { color:var(--bad); }
+.vr { font-weight:700; white-space:nowrap; } .vr.ok { color:var(--good); } .vr.ng { color:var(--bad); }
+code { font-size:13px; word-break:break-all; }
+.scroll { overflow-x:auto; }
+footer { margin-top:40px; font-size:12px; color:var(--muted); border-top:1px solid var(--line); padding-top:12px; }
+footer code { font-size:12px; }
+@media (max-width:640px) { .hero { grid-template-columns:1fr; } .total { font-size:44px; }
+  .item-body { padding-left:8px; } .ticks span:nth-child(odd):not(:first-child) { display:none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>AI-Ready 점수표 · inventroy-management</h1>
+  <div class="muted small">feature/IM5-readme-cleanup @ 2a6a1fa · 파일 105개 스캔 ·
+    2026-09-25T13:57:03+09:00</div>
+
+  <section class="card hero">
+    <div class="total">76<span>/100</span></div>
+    <div>
+      <div class="grade">AI-Ready</div>
+      <div>대부분의 개발 작업에서 AI가 안정적으로 navigation, edit, verify 가능</div>
+      
+      <div class="meter"><div class="fill"></div></div>
+      <div class="ticks"><span style="left:0;transform:none">0</span><span style="left:40%">40 Fragile</span>
+        <span style="left:60%">60 Assisted</span><span style="left:75%">75 Ready</span><span style="left:90%">90 Native</span></div>
+      <div class="muted small" style="margin-top:6px">휴리스틱 자동 점수입니다 (판단 보정 전).</div>
+      <p class="summary">CLAUDE.md → __workspace 패키지 문서로 이어지는 2-hop navigation이 모든 핵심 module을 덮고, 각 문서가 소유 범위·수정 패턴·실패 함정·의존성·배경을 코드 근거와 함께 답해 탐색성과 암묵지 항목이 만점이다. 문서 속 참조 87건이 모두 실존하고 표본 검증한 서술도 코드와 일치한다. 남은 약점은 자동화다: context 검증 CI·스케줄, 아키텍처 테스트, 독립 리뷰, eval 세트, 성과 측정이 없다.</p>
+    </div>
+  </section>
+
+  <h2>카테고리별 점수</h2>
+  <section class="card cats">
+      <div class="cat">
+        <div class="cat-head"><span class="cat-id">A</span><span class="cat-name">AI 탐색성 &amp; 커버리지
+          <span class="muted small">AI Navigation &amp; Coverage</span></span>
+          
+          <span class="cat-score">15<span class="muted">/15</span></span></div>
+        <div class="bar"><div class="fill" style="width:100.0%;background:var(--good)"></div></div>
+        <div class="muted small level">모든 핵심 module/workflow에 navigation guide, 1-2 hops 안에 찾음</div>
+      </div>
+      <div class="cat">
+        <div class="cat-head"><span class="cat-id">B</span><span class="cat-name">컨텍스트 문서 품질
+          <span class="muted small">Context Document Quality</span></span>
+          
+          <span class="cat-score">20<span class="muted">/20</span></span></div>
+        <div class="bar"><div class="fill" style="width:100.0%;background:var(--good)"></div></div>
+        <div class="muted small level">하위 항목 합산</div>
+      </div>
+      <div class="cat">
+        <div class="cat-head"><span class="cat-id">C</span><span class="cat-name">암묵지 외재화
+          <span class="muted small">Tribal Knowledge Externalization</span></span>
+          
+          <span class="cat-score">20<span class="muted">/20</span></span></div>
+        <div class="bar"><div class="fill" style="width:100.0%;background:var(--good)"></div></div>
+        <div class="muted small level">tribal knowledge 대부분이 context/checklist/playbook에 반영, 질의로 회수 가능</div>
+      </div>
+      <div class="cat">
+        <div class="cat-head"><span class="cat-id">D</span><span class="cat-name">모듈 간 의존성 &amp; 데이터 흐름
+          <span class="muted small">Cross-Module Dependency &amp; Data Flow Mapping</span></span>
+          
+          <span class="cat-score">10<span class="muted">/15</span></span></div>
+        <div class="bar"><div class="fill" style="width:66.7%;background:var(--mid)"></div></div>
+        <div class="muted small level">주요 module 간 dependency와 ownership 문서화</div>
+      </div>
+      <div class="cat">
+        <div class="cat-head"><span class="cat-id">E</span><span class="cat-name">검증 &amp; 품질 게이트
+          <span class="muted small">Verification &amp; Quality Gates</span></span>
+          
+          <span class="cat-score">8<span class="muted">/15</span></span></div>
+        <div class="bar"><div class="fill" style="width:53.3%;background:var(--mid)"></div></div>
+        <div class="muted small level">하위 항목 합산</div>
+      </div>
+      <div class="cat">
+        <div class="cat-head"><span class="cat-id">F</span><span class="cat-name">최신성 &amp; 자동 유지
+          <span class="muted small">Freshness &amp; Self-Maintenance</span></span>
+          
+          <span class="cat-score">3<span class="muted">/10</span></span></div>
+        <div class="bar"><div class="fill" style="width:30.0%;background:var(--warn)"></div></div>
+        <div class="muted small level">문서 owner가 있고 가끔 업데이트</div>
+      </div>
+      <div class="cat">
+        <div class="cat-head"><span class="cat-id">G</span><span class="cat-name">에이전트 성과 측정
+          <span class="muted small">Agent Performance Outcomes</span></span>
+          
+          <span class="cat-score">0<span class="muted">/5</span></span></div>
+        <div class="bar"><div class="fill" style="width:0.0%;background:var(--bad)"></div></div>
+        <div class="muted small level">AI 성능 개선 측정 없음</div>
+      </div></section>
+
+  <h2>ROI 우선순위 액션</h2>
+  <section class="card scroll">
+    <table><thead><tr><th class="num">#</th><th>항목</th><th>액션</th><th class="num">예상 상승</th><th>노력</th>
+      <th class="num">ROI</th></tr></thead><tbody>
+        <tr><td class="num">1</td><td><span class="pill">F</span></td>
+          <td><strong>context 경로·링크 검증을 CI + 주간 스케줄로 실행</strong>
+            <div class="muted small">context 문서의 파일 경로/명령 실재 여부를 PR마다 검사하고, 같은 검사를 cron으로 주 1회 실행</div></td>
+          <td class="num">+7</td><td>보통</td>
+          <td class="num"><strong>3.5</strong></td></tr>
+        <tr><td class="num">2</td><td><span class="pill">D</span></td>
+          <td><strong>의존 규칙을 아키텍처 테스트/map으로 고정</strong>
+            <div class="muted small">ArchUnit·dependency-cruiser·import-linter 등으로 허용 의존 방향을 테스트로 강제</div></td>
+          <td class="num">+5</td><td>보통</td>
+          <td class="num"><strong>2.5</strong></td></tr>
+        <tr><td class="num">3</td><td><span class="pill">G</span></td>
+          <td><strong>AI 작업 성과 지표 측정</strong>
+            <div class="muted small">eval 세트 기준 pass rate·tool calls·tokens·소요 시간을 context 개선 전후로 기록</div></td>
+          <td class="num">+5</td><td>보통</td>
+          <td class="num"><strong>2.5</strong></td></tr>
+        <tr><td class="num">4</td><td><span class="pill">E2</span></td>
+          <td><strong>독립 리뷰 체크리스트/리뷰 에이전트 추가</strong>
+            <div class="muted small">.claude/agents/reviewer.md 또는 자동 리뷰로 2차 검토</div></td>
+          <td class="num">+2</td><td>작음</td>
+          <td class="num"><strong>2.0</strong></td></tr>
+        <tr><td class="num">5</td><td><span class="pill">E4</span></td>
+          <td><strong>대표 AI task eval 세트 만들기</strong>
+            <div class="muted small">자주 하는 작업 5-10개를 프롬프트 + 기대 결과(수정 파일, 통과 테스트)로 저장</div></td>
+          <td class="num">+2</td><td>보통</td>
+          <td class="num"><strong>1.0</strong></td></tr>
+        <tr><td class="num">6</td><td><span class="pill">E2</span></td>
+          <td><strong>PR 템플릿에 AI 변경 검증 체크리스트 추가</strong>
+            <div class="muted small">참조 경로 확인, 테스트 결과 첨부, context 문서 갱신 여부 체크</div></td>
+          <td class="num">+1</td><td>작음</td>
+          <td class="num"><strong>1.0</strong></td></tr>
+        <tr><td class="num">7</td><td><span class="pill">E3</span></td>
+          <td><strong>변경 유형별 검증 명령 명시</strong>
+            <div class="muted small">context 문서에 빠진 종류의 검증 명령 추가</div><div class='targets'><code class='chip'>lint/format</code><code class='chip'>typecheck</code><code class='chip'>e2e</code></div></td>
+          <td class="num">+1</td><td>작음</td>
+          <td class="num"><strong>1.0</strong></td></tr>
+        <tr><td class="num">8</td><td><span class="pill">E3</span></td>
+          <td><strong>CI에서 테스트 실행</strong>
+            <div class="muted small">PR마다 테스트를 돌리는 CI 워크플로 추가</div></td>
+          <td class="num">+1</td><td>보통</td>
+          <td class="num"><strong>0.5</strong></td></tr></tbody></table>
+    <div class="muted small" style="margin-top:8px">예상 상승 = 이 액션만 완료했을 때 오르는 점수(현재 빠진 구성요소 기준) ·
+      ROI = 예상 상승 ÷ 노력(작음 1, 보통 2, 큼 3) · <span class="badge" style="margin:0">검토</span> 리뷰어가 추가한 액션</div>
+  </section>
+
+  <h2>검증 로그</h2>
+  <section class="card scroll">
+    <table><thead><tr><th>확인한 주장</th><th>결과</th><th>근거</th></tr></thead><tbody><tr><td>unique 위반은 제약 이름(uk_stock_history_request_id, uk_product_product_code)으로 판별</td>
+          <td><span class="vr ok">일치</span></td>
+          <td class="small">V1:8, V2:10 제약 정의와 StockCommandService.java:26-27 상수</td></tr><tr><td>출고는 WHERE quantity &gt;= :quantity 로 음수 방지</td>
+          <td><span class="vr ok">일치</span></td>
+          <td class="small">ProductRepository.java:30</td></tr><tr><td>신규 상품 입고는 ON CONFLICT DO NOTHING (업서트 없음)</td>
+          <td><span class="vr ok">일치</span></td>
+          <td class="small">ProductRepository.java:53</td></tr><tr><td>입고 BIGINT 초과는 translateOverflow로 409 변환</td>
+          <td><span class="vr ok">일치</span></td>
+          <td class="small">StockMutationExecutor.java:71, 166</td></tr><tr><td>시각은 애플리케이션 시계를 마이크로초로 잘라 사용</td>
+          <td><span class="vr ok">일치</span></td>
+          <td class="small">StockMutationExecutor.java:136 Instant.now().truncatedTo(MICROS)</td></tr><tr><td>stock.api는 stock 내부에서 command만 사용</td>
+          <td><span class="vr ok">일치</span></td>
+          <td class="small">stock/api/*.java import: stock.command.*, common.response.ErrorResponse</td></tr><tr><td>ddl-auto: validate 적용 범위</td>
+          <td><span class="vr ng">불일치 → 수정</span></td>
+          <td class="small">application-local.yml:25에만 존재. CLAUDE.md를 &#x27;local 프로필에서만&#x27;으로 정정</td></tr></tbody></table>
+    <div class="muted small" style="margin-top:8px">스크립트가 아니라 리뷰어(사람/에이전트)가 context 문서의 서술을 코드와 대조한 기록입니다.</div>
+  </section>
+  <h2>세부 항목 & 근거</h2>
+  <section class="card">
+      <details class="item">
+        <summary><span class="item-id">A</span><span class="item-name">Navigation Coverage</span>
+          <span class="item-score">15/15</span></summary>
+        <div class="item-body">
+          <p class="muted">핵심 module 3개, Navigation Coverage 100% (내부 context·링크로 닿는 전용 문서=1.0, AI 문서 언급=0.6, README 언급=0.3)</p>
+          <h4>근거</h4><ul><li>common: 전용 문서 __workspace/common.md (CLAUDE.md → __workspace/README.md → __workspace/common.md) (1.0)</li><li>stock: 전용 문서 __workspace/stock.md (CLAUDE.md → __workspace/README.md → __workspace/stock.md) (1.0)</li><li>product: 전용 문서 __workspace/product.md (CLAUDE.md → __workspace/README.md → __workspace/product.md) (1.0)</li></ul>
+          
+        </div>
+      </details>
+      <details class="item">
+        <summary><span class="item-id">B1</span><span class="item-name">B1. 간결성 (Conciseness)</span>
+          <span class="item-score">4/4</span></summary>
+        <div class="item-body">
+          <p class="muted">primary context 파일 1개 가중 평균 4.0/4</p>
+          <h4>근거</h4><ul><li>CLAUDE.md: 비어있지 않은 줄 32, 추정 1023 tokens</li></ul>
+          
+        </div>
+      </details>
+      <details class="item">
+        <summary><span class="item-id">B2</span><span class="item-name">B2. 빠른 명령어 (Quick Commands)</span>
+          <span class="item-score">4/4</span></summary>
+        <div class="item-body">
+          <p class="muted">primary context 파일 1개 가중 평균 4.0/4</p>
+          <h4>근거</h4><ul><li>CLAUDE.md: 명령어 7개 (설명 붙은 것 7개)</li></ul>
+          
+        </div>
+      </details>
+      <details class="item">
+        <summary><span class="item-id">B3</span><span class="item-name">B3. 핵심 파일 (Key Files)</span>
+          <span class="item-score">4/4</span></summary>
+        <div class="item-body">
+          <p class="muted">primary context 파일 1개 가중 평균 4.0/4</p>
+          <h4>근거</h4><ul><li>CLAUDE.md: 실존 파일 참조 3개 (디렉터리·문서 제외) [&#x27;src/main/resources/data.sql&#x27;, &#x27;common/exception/ErrorCode&#x27;, &#x27;support/AbstractIntegrationTest&#x27;]</li></ul>
+          
+        </div>
+      </details>
+      <details class="item">
+        <summary><span class="item-id">B4</span><span class="item-name">B4. 비자명 패턴 (Non-Obvious Patterns)</span>
+          <span class="item-score">4/4</span></summary>
+        <div class="item-body">
+          <p class="muted">primary context 파일 1개 가중 평균 4.0/4</p>
+          <h4>근거</h4><ul><li>CLAUDE.md: 경고성 규칙 6줄</li></ul>
+          
+        </div>
+      </details>
+      <details class="item">
+        <summary><span class="item-id">B5</span><span class="item-name">B5. 상호 참조 (See Also)</span>
+          <span class="item-score">4/4</span></summary>
+        <div class="item-body">
+          <p class="muted">primary context 파일 1개 가중 평균 4.0/4</p>
+          <h4>근거</h4><ul><li>CLAUDE.md: 상호 참조 8건</li></ul>
+          
+        </div>
+      </details>
+      <details class="item">
+        <summary><span class="item-id">C</span><span class="item-name">Five-Question Framework</span>
+          <span class="item-score">20/20</span></summary>
+        <div class="item-body">
+          <p class="muted">module별 Five-Question 답변 가능 여부 (module 전용 문서=1.0, 전역 문서만=0.5)</p>
+          <h4>근거</h4><ul><li>common: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0</li><li>stock: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0</li><li>product: Q1=1.0, Q2=1.0, Q3=1.0, Q4=1.0, Q5=1.0</li><li>전역 지식 소스 10개: [&#x27;.claude/rules/db-migration.md&#x27;, &#x27;.claude/rules/git-branch.md&#x27;, &#x27;.claude/rules/package-docs.md&#x27;, &#x27;.claude/rules/tdd.md&#x27;, &#x27;CLAUDE.md&#x27;, &#x27;README.md&#x27;, &#x27;__workspace/README.md&#x27;, &#x27;__workspace/common.md&#x27;]</li><li>ADR/decision 문서 0개, 코드 내 TODO/FIXME/HACK/XXX 주석 0개</li></ul>
+          
+        </div>
+      </details>
+      <details class="item">
+        <summary><span class="item-id">D</span><span class="item-name">Dependency &amp; Data Flow Map</span>
+          <span class="item-score">10/15</span></summary>
+        <div class="item-body">
+          <p class="muted">diagram·architecture 문서·dependency note(+5) / 전용 dependency·data-flow 섹션(+3) / ownership(+2) / machine-readable graph(+5)</p>
+          <h4>근거</h4><ul><li>본문 dependency note 6건: CLAUDE.md: …n/` (entities, repositories). Dependency direction is `api → command / query → domain`; `command` and `query` never reference | README.md: - 의존 방향: `api → command / query → domain`. `command`와 `query`는 서로 참조하지 않습니다. | __workspace/product.md: …ON CONFLICT (product_code) DO NOTHING` → 빈 결과. 호출자가 409로 바꿉니다.</li><li>dependency/data-flow 섹션: [&#x27;__workspace/common.md&#x27;, &#x27;__workspace/product.md&#x27;, &#x27;__workspace/stock.md&#x27;]</li><li>ownership: [&#x27;.github/CODEOWNERS&#x27;]</li></ul>
+          <h4>부족한 점</h4><ul><li>dependency note만 있고 architecture 문서/다이어그램 없음</li><li>&#x27;What depends on X?&#x27;에 답할 machine-readable map/아키텍처 테스트 없음</li></ul>
+        </div>
+      </details>
+      <details class="item">
+        <summary><span class="item-id">E1</span><span class="item-name">E1. 참조 정확성 (Reference Accuracy)</span>
+          <span class="item-score">5/5</span></summary>
+        <div class="item-body">
+          <p class="muted">참조 87건 중 깨진 참조 0건 (0%)</p>
+          <h4>근거</h4><ul><li>검증한 참조 87건 모두 실존</li></ul>
+          
+        </div>
+      </details>
+      <details class="item">
+        <summary><span class="item-id">E2</span><span class="item-name">E2. 독립 리뷰 (Critic Review)</span>
+          <span class="item-score">1/4</span></summary>
+        <div class="item-body">
+          <p class="muted">PR 템플릿(+1) / CODEOWNERS(+1) / 리뷰 체크리스트·에이전트·자동 리뷰(+2)</p>
+          <h4>근거</h4><ul><li>PR 템플릿: []</li><li>CODEOWNERS: .github/CODEOWNERS</li><li>리뷰 설정: []</li></ul>
+          <h4>부족한 점</h4><ul><li>PR 템플릿(체크리스트) 없음</li><li>독립 리뷰 체크리스트/리뷰 에이전트/자동 리뷰 없음</li></ul>
+        </div>
+      </details>
+      <details class="item">
+        <summary><span class="item-id">E3</span><span class="item-name">E3. 작업 검증 명령 (Task Validation)</span>
+          <span class="item-score">2/4</span></summary>
+        <div class="item-body">
+          <p class="muted">context 문서의 검증 명령 종류(최대 3) + CI 테스트 실행(+1)</p>
+          <h4>근거</h4><ul><li>context 문서의 검증 명령 종류: [&#x27;build&#x27;, &#x27;test&#x27;]</li><li>CI 파일: 없음 (테스트 실행: False)</li></ul>
+          <h4>부족한 점</h4><ul><li>lint/format 명령 미기재</li><li>typecheck 명령 미기재</li><li>e2e 명령 미기재</li><li>CI에서 테스트 미실행</li></ul>
+        </div>
+      </details>
+      <details class="item">
+        <summary><span class="item-id">E4</span><span class="item-name">E4. 프롬프트/워크플로 테스트</span>
+          <span class="item-score">0/2</span></summary>
+        <div class="item-body">
+          <p class="muted">eval/golden task 파일(2) / 문서의 대표 task 예시만(1)</p>
+          <h4>근거</h4><ul><li>eval 파일: 없음</li><li>문서 내 대표 task 예시: False</li></ul>
+          <h4>부족한 점</h4><ul><li>대표 AI task 질의 세트와 기대 결과가 없음</li></ul>
+        </div>
+      </details>
+      <details class="item">
+        <summary><span class="item-id">F</span><span class="item-name">Freshness Automation</span>
+          <span class="item-score">3/10</span></summary>
+        <div class="item-body">
+          <p class="muted">최근 갱신만(2) / owner + 갱신(3) → CI·스크립트 경로 검증(6) → 스케줄 자동 검증(10) 중 최고 단계</p>
+          <h4>근거</h4><ul><li>CODEOWNERS가 context/문서를 커버: True</li><li>context 파일 최근 갱신: CLAUDE.md=2026-09-25</li></ul>
+          <h4>부족한 점</h4><ul><li>context 경로/링크 검증 자동화 없음</li></ul>
+        </div>
+      </details>
+      <details class="item">
+        <summary><span class="item-id">G</span><span class="item-name">Outcome Measurement</span>
+          <span class="item-score">0/5</span></summary>
+        <div class="item-body">
+          <p class="muted">정성 언급(2) / metric 측정(3) / 3종 이상 metric의 before-after 비교(5)</p>
+          <h4>근거</h4><ul><li>metric 종류: []</li><li>before/after 문서: []</li><li>정성 언급 문서: []</li></ul>
+          <h4>부족한 점</h4><ul><li>AI task pass rate·tool calls·tokens 등의 before/after 측정 없음</li></ul>
+        </div>
+      </details></section>
+
+  <h2>핵심 module 커버리지</h2>
+  <section class="card scroll">
+    <div class="muted small" style="margin-bottom:6px">공통 경로: <code>src/main/java/com/example/inventory/management/</code></div>
+    <table><thead><tr><th>module</th><th class="num">코드 파일</th><th>안내 경로</th><th class="num">가중치</th></tr></thead>
+      <tbody>
+        <tr><td><code>common</code></td><td class="num">22</td>
+          <td>전용 문서 __workspace/common.md (CLAUDE.md → __workspace/README.md → __workspace/common.md)</td><td class="num">1.0</td></tr>
+        <tr><td><code>stock</code></td><td class="num">15</td>
+          <td>전용 문서 __workspace/stock.md (CLAUDE.md → __workspace/README.md → __workspace/stock.md)</td><td class="num">1.0</td></tr>
+        <tr><td><code>product</code></td><td class="num">9</td>
+          <td>전용 문서 __workspace/product.md (CLAUDE.md → __workspace/README.md → __workspace/product.md)</td><td class="num">1.0</td></tr></tbody></table>
+  </section>
+
+  <h2>Five-Question Framework</h2>
+  <section class="card scroll">
+    <table><thead><tr><th>module</th><th class="q" title="What does this module configure/own?">소유 범위</th><th class="q" title="What are common modification patterns?">수정 패턴</th><th class="q" title="What non-obvious patterns cause failures?">실패 함정</th><th class="q" title="What are the cross-module dependencies?">의존성</th><th class="q" title="What tribal knowledge is hidden in comments/history/human memory?">배경·이력</th></tr></thead><tbody><tr><td><code>common</code></td><td class="q q-full" title="module 전용 문서에 답 있음">●</td><td class="q q-full" title="module 전용 문서에 답 있음">●</td><td class="q q-full" title="module 전용 문서에 답 있음">●</td><td class="q q-full" title="module 전용 문서에 답 있음">●</td><td class="q q-full" title="module 전용 문서에 답 있음">●</td></tr><tr><td><code>stock</code></td><td class="q q-full" title="module 전용 문서에 답 있음">●</td><td class="q q-full" title="module 전용 문서에 답 있음">●</td><td class="q q-full" title="module 전용 문서에 답 있음">●</td><td class="q q-full" title="module 전용 문서에 답 있음">●</td><td class="q q-full" title="module 전용 문서에 답 있음">●</td></tr><tr><td><code>product</code></td><td class="q q-full" title="module 전용 문서에 답 있음">●</td><td class="q q-full" title="module 전용 문서에 답 있음">●</td><td class="q q-full" title="module 전용 문서에 답 있음">●</td><td class="q q-full" title="module 전용 문서에 답 있음">●</td><td class="q q-full" title="module 전용 문서에 답 있음">●</td></tr></tbody></table>
+    <div class="muted small" style="margin-top:8px">● module 전용 문서에 답 있음 · ◐ 전역 문서에만 있음 · ○ 답 없음 · 열 제목에 마우스를 올리면 원래 질문이 보입니다.</div>
+  </section>
+
+  <footer>
+    재현 정보 · 스크립트 v1.3.0 (<code>b31c74679ba1</code>) ·
+    루브릭 <code>70cc8b7ed437</code> ·
+    보정 파일 <code>overrides.json</code> (<code>238cb295ecf9</code>)
+    <div>실행: <code>python3 score.py . --out docs/ai-ready --overrides docs/ai-ready/overrides.json</code></div>
+  </footer>
+</main>
+</body>
+</html>
