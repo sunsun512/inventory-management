@@ -2,6 +2,7 @@ package com.example.inventory.management.product.api;
 
 import com.example.inventory.management.common.response.ErrorResponse;
 import com.example.inventory.management.common.response.PageResponse;
+import com.example.inventory.management.common.validation.ProductCodeFormat;
 import com.example.inventory.management.product.query.dto.ProductDetailResponse;
 import com.example.inventory.management.product.query.dto.ProductSummaryResponse;
 import com.example.inventory.management.product.query.dto.StockQuantityResponse;
@@ -13,8 +14,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 
 /**
  * OpenAPI documentation for {@link ProductController}, kept apart so the controller stays readable.
@@ -43,8 +42,7 @@ interface ProductApi {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     PageResponse<ProductSummaryResponse> getProducts(
             @Parameter(description = "상품 코드 정확 일치 필터 (선택, `^[A-Z0-9]+$`, 최대 64자)", example = "SKU1")
-            @Size(max = 64) @Pattern(regexp = "^[A-Z0-9]+$", message = "productCode는 영문 대문자와 숫자로만 구성되어야 합니다.")
-            String productCode,
+            @ProductCodeFormat String productCode,
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0") @Min(value = 0, message = "0 이상이어야 합니다.") int page,
             @Parameter(description = "페이지 크기 (1 이상, 100 초과 시 100으로 제한)", example = "10") @Min(value = 1, message = "1 이상이어야 합니다.") int size);
 

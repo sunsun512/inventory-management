@@ -506,6 +506,38 @@ class StockControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void 신규_입고의_상품코드가_64자를_넘으면_길이_제한_메시지로_400을_반환하고_상품이_생성되지_않는다() throws Exception {
+        String productCode = "A".repeat(65);
+        Map<String, Object> body = Map.of(
+                "productCode", productCode, "productName", "상품", "quantity", 5, "requestId", newRequestId());
+        log.debug("64자 초과 상품코드로 신규 입고 요청 전송");
+
+        postJson(INBOUND, body)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("productCode: productCode는 64자 이하여야 합니다."));
+        log.error("예상된 400 VALIDATION_FAILED 응답 확인 - 64자 초과 상품코드 입고");
+
+        assertThat(productRepository.findByProductCode(productCode)).isEmpty();
+    }
+
+    @Test
+    void 출고의_상품코드가_64자를_넘으면_길이_제한_메시지로_400을_반환하고_수량은_변하지_않는다() throws Exception {
+        Long productId = insertProduct(jdbcTemplate, "SKUOUTLEN", "상품", 10L);
+        Map<String, Object> body = Map.of(
+                "productId", productId, "productCode", "A".repeat(65), "quantity", 1, "requestId", newRequestId());
+        log.debug("64자 초과 상품코드로 출고 요청 전송: productId={}", productId);
+
+        postJson(OUTBOUND, body)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("productCode: productCode는 64자 이하여야 합니다."));
+        log.error("예상된 400 VALIDATION_FAILED 응답 확인 - 64자 초과 상품코드 출고: productId={}", productId);
+
+        assertThat(productRepository.findById(productId).orElseThrow().getQuantity()).isEqualTo(10L);
+    }
+
+    @Test
     void productId와_함께_보낸_상품코드_형식이_잘못되면_400을_반환하고_수량은_변하지_않는다() throws Exception {
         Long productId = insertProduct(jdbcTemplate, "SKUFMT1", "상품", 3L);
         Map<String, Object> body = Map.of(

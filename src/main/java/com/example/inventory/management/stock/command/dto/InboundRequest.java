@@ -1,13 +1,12 @@
 package com.example.inventory.management.stock.command.dto;
 
+import com.example.inventory.management.common.validation.ProductCodeFormat;
 import com.example.inventory.management.stock.command.validation.QuantityLimit;
 import com.example.inventory.management.stock.command.validation.RequestIdFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 
 import java.util.Locale;
 
@@ -20,10 +19,7 @@ public record InboundRequest(
         Long productId,
 
         @Schema(description = "상품 코드. 기존 상품 입고 시 해당 상품의 코드와 정확히 일치해야 한다", example = "SKU1")
-        @NotNull
-        @Size(max = 64)
-        @Pattern(regexp = "^[A-Z0-9]+$", message = "productCode는 영문 대문자와 숫자로만 구성되어야 합니다.")
-        String productCode,
+        @NotNull @ProductCodeFormat String productCode,
 
         @Schema(description = "상품명. 신규 상품 등록 입고에서만 필수(1~255자)이며 기존 상품 입고에서는 무시된다",
                 maxLength = MAX_PRODUCT_NAME_LENGTH, example = "상품 A")

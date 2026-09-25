@@ -7,7 +7,8 @@
 --   * 첫 이력은 신규 상품 등록 입고(before_quantity = 0)
 --   * before/after가 끊김 없이 이어지고 재고는 음수가 되지 않으며,
 --     product.quantity는 마지막 이력의 after_quantity와 같다.
---   * 이력은 created_at 순서로 INSERT하므로 상품별 id 순서 = 실제 반영 순서(V3 인덱스 전제).
+--   * 이력은 created_at 순서로 INSERT하므로 상품별 id 순서 = 실제 반영 순서다.
+--     이력 조회 정렬(created_at DESC, id DESC, V3 인덱스)의 동점 처리(id)가 이 순서에 기댄다.
 --
 -- Flyway 마이그레이션이 아니다. Spring Boot SQL 초기화(spring.sql.init)가 Flyway 마이그레이션 뒤에
 -- 애플리케이션 기동마다 실행한다. local 프로필만 켜져 있고(mode: always, DB_SEED_MODE=never로 끔),

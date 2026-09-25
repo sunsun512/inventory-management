@@ -306,6 +306,15 @@ class ProductControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void 상품코드가_64자를_넘으면_길이_제한_메시지로_400을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/products").param("productCode", "A".repeat(65)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.message").value("productCode: productCode는 64자 이하여야 합니다."));
+        log.warn("예상된 400 응답 확인: 64자 초과 productCode");
+    }
+
+    @Test
     void 최대_길이_64자의_상품코드는_허용된다() throws Exception {
         mockMvc.perform(get("/api/v1/products").param("productCode", "A".repeat(64)))
                 .andExpect(status().isOk());

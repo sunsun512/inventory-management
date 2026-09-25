@@ -23,6 +23,7 @@
 - IM5 - 문서화
 - IM6 - 고가용성을 위한 설계
 - IM7 - 운영 안정성
+- IM8 - 코드 리뷰 체계
 
 # 기술 스택
 | 항목 | 용도 |
@@ -64,6 +65,8 @@ CREATE DATABASE inventory OWNER "inventory-user" ENCODING 'UTF8' TEMPLATE templa
 - 종료 신호(SIGTERM)를 받으면 처리 중인 요청을 최대 20초 기다린 뒤 종료합니다.
 
 ## 환경 변수
+`local` 프로필 기준입니다. `DB_LOCK_TIMEOUT`·`DB_STATEMENT_TIMEOUT`·`RATE_LIMIT_*`만 모든 프로필에 적용됩니다.
+
 | 이름 | 기본값 | 용도 |
 |---|---|---|
 | `DB_USERNAME` / `DB_PASSWORD` | `inventory-user` / `inventory-password` | DB 접속 계정 |
@@ -93,7 +96,7 @@ CREATE DATABASE inventory OWNER "inventory-user" ENCODING 'UTF8' TEMPLATE templa
 - 테스트가 끝나면 JaCoCo 커버리지 리포트가 `build/reports/jacoco/test/html/index.html`에 생성됩니다.
 
 # API 명세
-애플리케이션 실행 후 Swagger에서 확인합니다.
+`local` 프로필로 실행했을 때만 Swagger에서 확인할 수 있습니다(다른 프로필에서는 비활성화).
 
 - Swagger UI: http://localhost:8080/swagger-ui/index.html
 - OpenAPI JSON: http://localhost:8080/v3/api-docs

@@ -1,12 +1,11 @@
 package com.example.inventory.management.stock.command.dto;
 
+import com.example.inventory.management.common.validation.ProductCodeFormat;
 import com.example.inventory.management.stock.command.validation.QuantityLimit;
 import com.example.inventory.management.stock.command.validation.RequestIdFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 
 import java.util.Locale;
 
@@ -15,10 +14,7 @@ public record OutboundRequest(
         @NotNull Long productId,
 
         @Schema(description = "상품 코드. 해당 상품의 코드와 정확히 일치해야 한다", example = "SKU1")
-        @NotNull
-        @Size(max = 64)
-        @Pattern(regexp = "^[A-Z0-9]+$", message = "productCode는 영문 대문자와 숫자로만 구성되어야 합니다.")
-        String productCode,
+        @NotNull @ProductCodeFormat String productCode,
 
         @Schema(description = "출고 수량. 현재 재고 이하여야 하며, 10,000 초과는 409 QUANTITY_LIMIT_EXCEEDED", minimum = "1", maximum = "10000", example = "10")
         @NotNull @Positive @QuantityLimit Long quantity,

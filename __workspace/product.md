@@ -8,7 +8,7 @@
 
 ## 핵심 파일
 - `src/main/java/com/example/inventory/management/product/domain/ProductRepository.java` — `decreaseQuantityIfSufficient`, `increaseQuantity`, `insertProductIfAbsent`
-- `src/main/java/com/example/inventory/management/product/api/ProductApi.java` — Swagger 설명 + `@Min`/`@Pattern` 등 요청 파라미터 제약
+- `src/main/java/com/example/inventory/management/product/api/ProductApi.java` — Swagger 설명 + `@Min`/`@ProductCodeFormat` 등 요청 파라미터 제약
 - `src/main/java/com/example/inventory/management/product/query/ProductQueryRepository.java` — 목록 조회(필터·정렬·페이징)
 - `src/main/java/com/example/inventory/management/product/query/ProductQueryService.java` — `size` 상한 적용, 404 처리
 - `src/main/resources/db/migration/V1__create_product_table.sql` — `uk_product_product_code`, `ck_product_quantity_non_negative`
@@ -33,11 +33,11 @@
 - **`insertProductIfAbsent`는 기존 상품에 재고를 더하지 않음**: `ON CONFLICT (product_code) DO NOTHING` → 빈 결과. 호출자가 409로 바꿉니다.
 - **파라미터 제약은 `ProductApi`에만**: Bean Validation은 인터페이스 메서드에 선언된 제약을 구현 메서드에서 다시 선언하는 것을 허용하지 않습니다(`ProductApi` 클래스 주석).
 - **페이지 크기**: `size`가 `PageResponse.MAX_SIZE`(100)를 넘으면 조용히 100으로 줄입니다. 전체 건수(count) 쿼리는 없습니다.
-- **`productCode` 필터는 정확 일치**: 대소문자 무시·부분 일치 없음. 형식이 `^[A-Z0-9]+$`가 아니면 400.
+- **`productCode` 필터는 정확 일치**: 대소문자 무시·부분 일치 없음. 형식(`^[A-Z0-9]+$`, 최대 64자)은 입고·출고와 같은 `common.validation.ProductCodeFormat`으로 검증하며, 어기면 400.
 - 테스트에서 상품은 `support/ProductFixtures`로 SQL 직접 삽입합니다(운영 등록 경로는 기존 코드를 거부하기 때문).
 
 ## 의존성
-- product → common: `common.response`(`PageResponse`, `ErrorResponse`), `common.exception.ProductNotFoundException`
+- product → common: `common.response`(`PageResponse`, `ErrorResponse`), `common.exception.ProductNotFoundException`, `common.validation.ProductCodeFormat`
 - product → stock: `product.api.ProductController` → `stock.query.StockHistoryQueryService`, `ProductController`/`ProductApi` → `stock.query.dto.StockHistoryResponse` (재고 이력 조회 엔드포인트)
 - 내부: `product.api` → `product.query` → `product.domain`
 - product에 의존하는 쪽: `stock.command.StockMutationExecutor` → `product.domain.Product`/`ProductRepository`, `stock.query.StockHistoryQueryService` → `product.domain.ProductRepository`
