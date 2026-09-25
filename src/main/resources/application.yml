@@ -1,9 +1,21 @@
+server:
+  # SIGTERM을 받으면 새 요청을 받지 않고, 처리 중인 요청이 끝날 때까지 기다린 뒤 종료한다.
+  # (Boot 3.4+ 기본값이지만 의도를 드러내기 위해 명시한다)
+  shutdown: graceful
+
 spring:
   application:
     name: inventory-management
 
+  lifecycle:
+    # 처리 중인 요청을 기다리는 최대 시간. 요청 한 건의 최악 소요 시간
+    # (커넥션 대기 3s + lock_timeout 3s + statement_timeout 5s x 문장 수)보다 여유 있게 잡는다.
+    timeout-per-shutdown-phase: 20s
+
   datasource:
     hikari:
+      # 커넥션 풀 대기 시간. 기본값(30s)이면 이 대기만으로 종료 대기 시간을 넘길 수 있어 짧게 둔다.
+      connection-timeout: 3000
       data-source-properties:
         # 세션 단위 Postgres 타임아웃. 상품 행 락을 오래 기다리거나(lock_timeout, SQLState 55P03)
         # 쿼리가 오래 걸리면(statement_timeout, 57014) 커넥션을 무한정 붙잡지 않고 실패시킨다.

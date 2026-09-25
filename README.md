@@ -47,6 +47,7 @@ docker compose -f local/docker-compose.yml up -d
 ```
 - DB 사용자/비밀번호는 `DB_USERNAME` / `DB_PASSWORD`, 커넥션 풀은 `DB_POOL_MAX_SIZE` / `DB_POOL_MIN_IDLE`, 타임아웃은 `DB_LOCK_TIMEOUT`(기본 3s) / `DB_STATEMENT_TIMEOUT`(기본 5s)으로 바꿀 수 있습니다.
 - 기동 시 Flyway가 `src/main/resources/db/migration`의 마이그레이션을 적용합니다.
+- 종료 신호(SIGTERM)를 받으면 새 요청을 받지 않고, 처리 중인 요청을 최대 20초 기다린 뒤 종료합니다(graceful shutdown).
 
 ## 로컬 시드 데이터
 `local` 프로필로 기동하면 테이블이 비어 있을 때만 상품 10,000개와 재고 이력 약 10만 건을 생성합니다(약 20초, `src/main/resources/data.sql`).
