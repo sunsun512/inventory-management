@@ -2,6 +2,7 @@ package com.example.inventory.management.common.ratelimit;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Ticker;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;
@@ -18,32 +19,44 @@ import java.time.Duration;
  */
 public class PostRateLimiter {
 
-    /**
-     * Must be longer than the time an empty bucket takes to refill (capacity / refillPerSecond). If a
-     * half-empty bucket were evicted earlier, the client would get a new full bucket and bypass the limit.
-     */
-    private static final Duration IDLE_EXPIRY = Duration.ofMinutes(10);
-
     /** Caps memory when many different clients call; the least recently used buckets are evicted first. */
     private static final long MAX_CLIENTS = 100_000;
 
     private final Bandwidth bandwidth;
     private final TimeMeter timeMeter;
-    private final Cache<String, Bucket> buckets = Caffeine.newBuilder()
-            .expireAfterAccess(IDLE_EXPIRY)
-            .maximumSize(MAX_CLIENTS)
-            .build();
+    private final Cache<String, Bucket> buckets;
 
     /**
      * @throws IllegalArgumentException if capacity or refillPerSecond is not positive, so a bad setting
      *                                  fails at startup instead of on every request
      */
     public PostRateLimiter(RateLimitProperties properties, TimeMeter timeMeter) {
+        this(properties, timeMeter, Ticker.systemTicker());
+    }
+
+    /** Tests pass a fake ticker so bucket expiry can be verified without waiting. */
+    PostRateLimiter(RateLimitProperties properties, TimeMeter timeMeter, Ticker ticker) {
         this.bandwidth = Bandwidth.builder()
                 .capacity(properties.capacity())
                 .refillGreedy(properties.refillPerSecond(), Duration.ofSeconds(1))
                 .build();
         this.timeMeter = timeMeter;
+        this.buckets = Caffeine.newBuilder()
+                .expireAfterAccess(timeToRefill(properties))
+                .maximumSize(MAX_CLIENTS)
+                .ticker(ticker)
+                .build();
+    }
+
+    /**
+     * How long an empty bucket takes to fill up (capacity / refillPerSecond). A bucket idle this long is
+     * already full, so evicting it then is the same as keeping it. Evicting a bucket earlier would hand the
+     * client a new full bucket and let it bypass the limit.
+     */
+    private static Duration timeToRefill(RateLimitProperties properties) {
+        long capacityNanos = Math.multiplyExact(properties.capacity(), Duration.ofSeconds(1).toNanos());
+        // Round up: expiring even 1ns early would hand out a bucket that is not yet full. (Math.ceilDiv is Java 18+.)
+        return Duration.ofNanos(-Math.floorDiv(-capacityNanos, properties.refillPerSecond()));
     }
 
     public ConsumptionProbe tryConsume(String clientKey) {
