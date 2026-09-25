@@ -1,13 +1,66 @@
 {
-  "summary": "CLAUDE.md → __workspace 패키지 문서로 이어지는 2-hop navigation이 모든 핵심 module을 덮고, 각 문서가 소유 범위·수정 패턴·실패 함정·의존성·배경을 코드 근거와 함께 답해 탐색성과 암묵지 항목이 만점이다. 문서 속 참조 87건이 모두 실존하고 표본 검증한 서술도 코드와 일치한다. 남은 약점은 자동화다: context 검증 CI·스케줄, 아키텍처 테스트, 독립 리뷰, eval 세트, 성과 측정이 없다.",
+  "summary": "CLAUDE.md → __workspace 패키지 문서로 이어지는 2-hop navigation과 코드 근거가 있는 패키지 문서로 탐색성·문서 품질·암묵지가 만점이고, IM8에서 3-round 리뷰 체계(작성자 자가 점검 → 독립 컨텍스트의 code-reviewer 에이전트 → CODEOWNERS 사람 리뷰)와 PR 템플릿이 추가되어 독립 리뷰(E2)도 만점이다. 남은 약점은 자동화다: context 경로 검증 CI·스케줄, 아키텍처 테스트, eval 세트, 성과 측정이 없다.",
   "items": {},
   "verification": [
-    {"claim": "unique 위반은 제약 이름(uk_stock_history_request_id, uk_product_product_code)으로 판별", "result": "일치", "evidence": "V1:8, V2:10 제약 정의와 StockCommandService.java:26-27 상수"},
-    {"claim": "출고는 WHERE quantity >= :quantity 로 음수 방지", "result": "일치", "evidence": "ProductRepository.java:30"},
-    {"claim": "신규 상품 입고는 ON CONFLICT DO NOTHING (업서트 없음)", "result": "일치", "evidence": "ProductRepository.java:53"},
-    {"claim": "입고 BIGINT 초과는 translateOverflow로 409 변환", "result": "일치", "evidence": "StockMutationExecutor.java:71, 166"},
-    {"claim": "시각은 애플리케이션 시계를 마이크로초로 잘라 사용", "result": "일치", "evidence": "StockMutationExecutor.java:136 Instant.now().truncatedTo(MICROS)"},
-    {"claim": "stock.api는 stock 내부에서 command만 사용", "result": "일치", "evidence": "stock/api/*.java import: stock.command.*, common.response.ErrorResponse"},
-    {"claim": "ddl-auto: validate 적용 범위", "result": "불일치 → 수정", "evidence": "application-local.yml:25에만 존재. CLAUDE.md를 'local 프로필에서만'으로 정정"}
+    {
+      "claim": "unique 위반은 제약 이름(uk_stock_history_request_id, uk_product_product_code)으로 판별",
+      "result": "일치",
+      "evidence": "V1:8, V2:10 제약 정의와 StockCommandService.java:26-27 상수"
+    },
+    {
+      "claim": "출고는 WHERE quantity >= :quantity 로 음수 방지",
+      "result": "일치",
+      "evidence": "ProductRepository.java:30"
+    },
+    {
+      "claim": "신규 상품 입고는 ON CONFLICT DO NOTHING (업서트 없음)",
+      "result": "일치",
+      "evidence": "ProductRepository.java:53"
+    },
+    {
+      "claim": "입고 BIGINT 초과는 translateOverflow로 409 변환",
+      "result": "일치",
+      "evidence": "StockMutationExecutor.java:71, 166"
+    },
+    {
+      "claim": "시각은 애플리케이션 시계를 마이크로초로 잘라 사용",
+      "result": "일치",
+      "evidence": "StockMutationExecutor.java:136 Instant.now().truncatedTo(MICROS)"
+    },
+    {
+      "claim": "stock.api는 stock 내부에서 command만 사용",
+      "result": "일치",
+      "evidence": "stock/api/*.java import: stock.command.*, common.response.ErrorResponse"
+    },
+    {
+      "claim": "ddl-auto: validate 적용 범위",
+      "result": "불일치 → 수정",
+      "evidence": "application-local.yml:25에만 존재. CLAUDE.md를 'local 프로필에서만'으로 정정"
+    },
+    {
+      "claim": "체크리스트: 새 비즈니스 오류는 ErrorCode + InventoryException 하위 클래스",
+      "result": "일치",
+      "evidence": "common/exception의 7개 예외가 InventoryException(ErrorCode, message) 상속"
+    },
+    {
+      "claim": "체크리스트: rate limit 버킷 만료 ≥ capacity ÷ refill-per-second",
+      "result": "일치",
+      "evidence": "커밋 0717d80, PostRateLimiter.java:51-60"
+    },
+    {
+      "claim": "code-reviewer 에이전트 정의로 실제 리뷰 가능 (스모크 테스트)",
+      "result": "일치",
+      "evidence": "커밋 0717d80 리뷰: file:line 근거 2건, 체크리스트 항목별 판정, PostRateLimiterTest 7건 통과. 피드백 4건을 정의·체크리스트에 반영"
+    },
+    {
+      "claim": "__workspace/common.md: rate limit 유효 범위 capacity ≥ 1, refill-per-second 1~10억",
+      "result": "일치",
+      "evidence": "PostRateLimiter Javadoc·timeToRefill(ea6794e), Bucket4j 8.20.0 실측(1e9 초과 IAE), PostRateLimiterTest 10건 통과"
+    },
+    {
+      "claim": "code-reviewer 에이전트 실사용 (PostRateLimiter 수정 PR 전 리뷰)",
+      "result": "일치",
+      "evidence": "산술 경계 증명·체크리스트 판정·rate limit 테스트 19건 실행, 사소 1건(multiplyExact) 반영 후 커밋"
+    }
   ]
 }
