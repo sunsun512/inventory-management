@@ -53,6 +53,36 @@ PostgreSQL(17 권장)에 superuser로 접속해 사용자와 DB를 만듭니다.
 ```sql
 CREATE USER "inventory-user" WITH PASSWORD 'inventory-password';
 CREATE DATABASE inventory OWNER "inventory-user" ENCODING 'UTF8' TEMPLATE template0;
+
+CREATE TABLE product (
+    id            BIGSERIAL PRIMARY KEY,
+    product_code  VARCHAR(64)  NOT NULL,
+    name          VARCHAR(255) NOT NULL,
+    quantity      BIGINT       NOT NULL DEFAULT 0,
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CONSTRAINT uk_product_product_code UNIQUE (product_code),
+    CONSTRAINT ck_product_quantity_non_negative CHECK (quantity >= 0)
+);
+
+CREATE TABLE stock_history (
+    id               BIGSERIAL PRIMARY KEY,
+    product_id       BIGINT       NOT NULL REFERENCES product (id),
+    type             VARCHAR(16)  NOT NULL,
+    quantity         BIGINT       NOT NULL,
+    before_quantity  BIGINT       NOT NULL,
+    after_quantity   BIGINT       NOT NULL,
+    request_id       VARCHAR(64)  NOT NULL,
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CONSTRAINT uk_stock_history_request_id UNIQUE (request_id),
+    CONSTRAINT ck_stock_history_type CHECK (type IN ('INBOUND', 'OUTBOUND')),
+    CONSTRAINT ck_stock_history_quantity_positive CHECK (quantity > 0),
+    CONSTRAINT ck_stock_history_before_non_negative CHECK (before_quantity >= 0),
+    CONSTRAINT ck_stock_history_after_non_negative CHECK (after_quantity >= 0)
+);
+
+CREATE INDEX CONCURRENTLY idx_stock_history_product_id_created_at_id ON stock_history (product_id, created_at DESC, id DESC);
+
 ```
 - 호스트·포트가 `localhost:5432`가 아니면 `application-local.yml`의 `spring.datasource.url`을 바꿉니다.
 
