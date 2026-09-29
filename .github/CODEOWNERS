@@ -1,0 +1,24 @@
+# CODEOWNERS
+# Declares who owns (and must review) each part of the repository.
+# GitHub automatically requests a review from the matching owner on every PR.
+# Owners are also responsible for keeping their areas — including the
+# AI context docs below — accurate and up to date.
+#
+# Order matters: the LAST matching pattern wins, so keep the default rule first
+# and put more specific paths after it.
+
+# Default owner for everything in the repository
+* @sunsun512
+
+# AI context docs (agent instructions, rules, per-package docs)
+/CLAUDE.md @sunsun512
+/.claude/ @sunsun512
+/__workspace/ @sunsun512
+
+# Database migrations (committed migrations are immutable; destructive changes need approval)
+/src/main/resources/db/migration/ @sunsun512
+
+# Feature packages
+/src/main/java/com/example/inventory/management/common/ @sunsun512
+/src/main/java/com/example/inventory/management/product/ @sunsun512
+/src/main/java/com/example/inventory/management/stock/ @sunsun512

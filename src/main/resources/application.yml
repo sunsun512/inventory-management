@@ -1,0 +1,91 @@
+server:
+  # SIGTERM을 받으면 새 요청을 받지 않고, 처리 중인 요청이 끝날 때까지 기다린 뒤 종료한다.
+  # (Boot 3.4+ 기본값이지만 의도를 드러내기 위해 명시한다)
+  shutdown: graceful
+
+spring:
+  application:
+    name: inventory-management
+
+  lifecycle:
+    # 처리 중인 요청을 기다리는 최대 시간. 요청 한 건의 최악 소요 시간
+    # (커넥션 대기 3s + lock_timeout 3s + statement_timeout 5s x 문장 수)보다 여유 있게 잡는다.
+    timeout-per-shutdown-phase: 20s
+
+  datasource:
+    hikari:
+      # 커넥션 풀 대기 시간. 기본값(30s)이면 이 대기만으로 종료 대기 시간을 넘길 수 있어 짧게 둔다.
+      connection-timeout: 3000
+      data-source-properties:
+        # 세션 단위 Postgres 타임아웃. 상품 행 락을 오래 기다리거나(lock_timeout, SQLState 55P03)
+        # 쿼리가 오래 걸리면(statement_timeout, 57014) 커넥션을 무한정 붙잡지 않고 실패시킨다.
+        # 애플리케이션에서는 503 STOCK_LOCK_TIMEOUT으로 응답한다.
+        options: -c lock_timeout=${DB_LOCK_TIMEOUT:3s} -c statement_timeout=${DB_STATEMENT_TIMEOUT:5s}
+
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  jackson:
+    deserialization:
+      # 재고 수량은 정수만 허용한다. 기본값(true)이면 1.9가 1로 잘려 조용히 처리되므로 끈다.
+      accept-float-as-int: false
+      # 요청 DTO에 없는 필드(오타, 출고의 productName 등)는 무시하지 않고 400으로 거부한다.
+      fail-on-unknown-properties: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    postgresql:
+      # 마이그레이션 잠금을 트랜잭션(pg_advisory_xact_lock) 대신 세션 단위(pg_advisory_lock)로 잡는다.
+      # 트랜잭션 잠금은 실행 내내 트랜잭션을 열어 두어 CREATE/DROP INDEX CONCURRENTLY가 그 종료를 기다리며 막힌다.
+      # 동시 실행 차단은 그대로이고, 각 마이그레이션의 트랜잭션 실행 여부에는 영향이 없다.
+      transactional-lock: false
+
+rate-limit:
+  # POST API 요청을 클라이언트 IP별로 제한한다(토큰 버킷). 초과하면 429 TOO_MANY_REQUESTS와 Retry-After를 응답한다.
+  # 버킷은 인스턴스 메모리에 두므로 인스턴스가 N대면 실제 한도는 N배가 된다.
+  post:
+    # 한 번에 몰아서 보낼 수 있는 최대 요청 수
+    capacity: ${RATE_LIMIT_CAPACITY:20}
+    # 초당 다시 채워지는 요청 수(평균 허용 속도)
+    refill-per-second: ${RATE_LIMIT_REFILL_PER_SECOND:10}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # 헬스체크만 노출한다. (env, beans 등 내부 정보는 노출하지 않는다)
+        include: health
+  endpoint:
+    health:
+      # 어떤 컴포넌트가 DOWN인지만 보여주고, DB 종류 같은 상세 정보는 외부에 노출하지 않는다.
+      show-components: always
+      show-details: never
+      probes:
+        enabled: true
+        # 관리 포트를 분리하더라도 메인 포트의 톰캣 상태를 볼 수 있도록 /livez, /readyz를 함께 노출한다.
+        add-additional-paths: true
+      group:
+        # liveness: 프로세스 자체가 살아 있는가. DB 장애는 재시작으로 해결되지 않으므로 포함하지 않는다.
+        liveness:
+          include: livenessState
+        # readiness: 지금 요청을 받을 수 있는가. DB에 연결할 수 없으면 트래픽을 받지 않는다.
+        readiness:
+          include: readinessState, db
+
+springdoc:
+  # 운영에서 API 명세 전체를 공개하지 않기 위해 /v3/api-docs와 Swagger UI는 끄고, local 프로필에서만 켠다.
+  api-docs:
+    enabled: false
+  # 응답 미디어 타입을 */* 대신 application/json으로 표기한다.
+  default-produces-media-type: application/json
+  # @RestControllerAdvice의 핸들러를 모든 API의 공통 응답으로 자동 추가하지 않는다.
+  # 에러 응답은 API마다 실제로 발생하는 것만 명시한다.
+  override-with-generic-response: false
+  swagger-ui:
+    enabled: false
+    operations-sorter: method
